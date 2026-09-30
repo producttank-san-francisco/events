@@ -8,9 +8,8 @@ CEO and co-founder, Zentrik.ai
 
 ## Links
 
-Links will be added after the event.
+- **Code:** [Zentrik Open CRM](https://github.com/Zentrik-AI/zentrik-open-crm) — the first open ARM (Agent Relationship Management): a local-first CRM that people and their agents work together, where every fact shows its source and nothing lands unapproved. Apache 2.0 license.
+
+More links will be added after the event.
 
 <!-- Add only links the speaker has approved for public sharing. -->
-<!-- - Slides: -->
-<!-- - Code: -->
-<!-- - Resources: -->
