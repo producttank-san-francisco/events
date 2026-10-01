@@ -8,9 +8,8 @@ Senior AI Product Leader, Qurrent; product-management instructor, Stanford
 
 ## Links
 
-Links will be added after the event.
+- Slides: [From IC to Orchestrator (PDF)](from-ic-to-orchestrator.pdf)
+- Code: [pm-copilot-starter](https://github.com/albertcollell-qurrent/pm-copilot-starter)
 
 <!-- Add only links the speaker has approved for public sharing. -->
-<!-- - Slides: -->
-<!-- - Code: -->
 <!-- - Resources: -->
