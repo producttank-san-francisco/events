@@ -15,7 +15,7 @@ Speakers show AI workflows that product people use every day. Each talk is follo
 | [Albert Collell](albert-collell/) | An LLM-powered personal wiki that turns meetings and interviews into a searchable second brain |
 | [Tom Alterman](tom-alterman/) | Using AI to take a product idea from concept to pull request |
 
-Also tonight: [Harness patterns](patterns/) — Wesley Frederick
+Also tonight: [Harness patterns](wesley-frederick/) — Wesley Frederick
 
 ## Recording
 
