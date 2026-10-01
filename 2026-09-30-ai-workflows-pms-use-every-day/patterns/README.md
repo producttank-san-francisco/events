@@ -13,4 +13,5 @@ The common building blocks behind tonight's workflows, without code terms:
 
 ## Links
 
+- **Slides:** [Harness patterns deck](https://docs.google.com/presentation/d/14niptypjY01zG5GDteGOaYHUIYe-Qj0vf9GQB53jlgI/edit?usp=sharing) — Wesley's opening talk (Google Slides; anyone with the link can view).
 - **Tool:** [jact](https://github.com/WesleyMFrederick/jact) — a command-line tool that maps, checks, and pulls sections out of Markdown files, so an AI gets only the context it needs. ISC license.
