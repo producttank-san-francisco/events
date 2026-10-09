@@ -8,6 +8,7 @@ CEO and co-founder, Zentrik.ai
 
 ## Links
 
+- **Slides:** [Build the harness that outlives the agent (PDF)](https://drive.google.com/file/d/1U4wxCvvcFjOHO7TR5GfNHJqH4e7WqBHI/view?usp=sharing)
 - **Code:** [Zentrik Open CRM](https://github.com/Zentrik-AI/zentrik-open-crm) — the first open ARM (Agent Relationship Management): a local-first CRM that people and their agents work together, where every fact shows its source and nothing lands unapproved. Apache 2.0 license.
 - **Try it:** [Open CRM in your browser](https://zentrik-ai.github.io/zentrik-open-crm/) — demo data, no sign-up, nothing leaves your browser.
 - **Customer calls:** [Calls into CRM evidence](https://github.com/Zentrik-AI/zentrik-open-crm/blob/main/docs/calls.md) — how a transcript becomes sourced, reviewable account updates.
