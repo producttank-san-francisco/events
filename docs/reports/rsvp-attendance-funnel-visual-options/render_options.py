@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Render three static comparison mockups; never rewrite the source GIF or stats.
+"""Render three comparison mockups and Option A's animated GIF; never rewrite the source GIF or stats.
 
 Run from any directory: python3 -B /path/to/render_options.py
-Requires Pillow and uses the existing slopegraph's palette and font loader.
+Requires Pillow and Gifski, and reuses the existing slopegraph's palette, font loader and animation timing.
 """
 from __future__ import annotations
 
 import json
 import math
+import shutil
+import subprocess
 import sys
+import tempfile
 from datetime import datetime
 from fractions import Fraction
 from pathlib import Path
@@ -20,7 +23,8 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path.insert(0, str(ROOT / "src/rsvp-slopegraph/src"))
 from rsvp_slopegraph import (  # noqa: E402
-    BACKGROUND, CLONES, MUTED, RENDER_SCALE, TEXT, VIEWS, fade, load_font, segment_hits_box,
+    BACKGROUND, CLONES, FINAL_HOLD_FRAMES, FPS, LABEL_FADE, MOTION_STEPS, MUTED, OPENING_HOLD_FRAMES,
+    RENDER_SCALE, STAGGER, TEXT, VIEWS, AnimationError, fade, line_progress, load_font, segment_hits_box,
 )
 
 DATA = json.loads((ROOT / "docs/reports/rsvp-slopegraph/stats.json").read_text())
@@ -99,7 +103,8 @@ class Canvas:
 
 
 def option_a():
-    c = Canvas(width=720, height=540)
+    width, height = 720, 540
+    measure = ImageDraw.Draw(Image.new("RGB", (1, 1)))
     xs = (169, 374, 579)
 
     def y(value):
@@ -116,9 +121,11 @@ def option_a():
         for _, counts, _ in series for i in range(2)
     ]
     boxes = []
+    # Each placed label: (row or None for static, stage it appears at, x, y, text, size, color, anchor).
+    labels = []
 
     def label_box(x, yy, text, size, anchor):
-        bounds = c.draw.textbbox((x*SCALE, yy*SCALE), text, font=FONTS[size], anchor=anchor)
+        bounds = measure.textbbox((x*SCALE, yy*SCALE), text, font=FONTS[size], anchor=anchor)
         return tuple(v/SCALE for v in bounds)
 
     # September's labels sit above its line; October's sit below its line.
@@ -140,35 +147,32 @@ def option_a():
                         and box[1]-3 < b[3] and box[3]+3 > b[1] for b in boxes)
         )
 
-    def label(x, yy, text, size=20, color=TEXT, anchor="mm"):
+    def label(x, yy, text, size=20, color=TEXT, anchor="mm", *, row=None, stage=0):
         box = label_box(x, yy, text, size, anchor)
         if not clear(box):
             raise ValueError(f"Label has insufficient line or text clearance: {text}")
-        c.text(x, yy, text, size, color, anchor=anchor)
+        labels.append((row, stage, x, yy, text, size, color, anchor))
         boxes.append(box)
 
     label(40, 40, f"October is on pace for ≈{round(ESTIMATE)} attendees", 28, anchor="lm")
     label(680, 40, "as of Oct. 27, 2026", 16, MUTED, "rm")
     for (start, end), text in zip(guides, ("RSVPs", "Email", "Attended")):
-        c.line(start, end, fade(MUTED, 0.5), 1, dashed=True)
         label(start[0], axis_y, text, 17, MUTED)
-    for name, counts, color in series:
+    for row, (name, counts, color) in enumerate(series):
         ys = [y(v) for v in counts]
-        for i in range(2):
-            c.line((xs[i], ys[i]), (xs[i+1], ys[i+1]), color, 2,
-                   dashed=name == "Oct." and i == 1)
         for i, (x, yy, value) in enumerate(zip(xs, ys, counts)):
             estimated = name == "Oct." and i == 2
-            c.dot(x, yy, color, hollow=estimated, radius=3)
             if i == 0:
+                # Left labels stay visible throughout, as in the existing slopegraph.
                 label(x-12, yy, f"{name} {value}", 20, color, "rm")
             elif i == 1:
-                label(x, yy + value_offset[name], str(value), 22, color)
+                label(x, yy + value_offset[name], str(value), 22, color, row=row, stage=1)
             else:
                 # Drop end labels slightly so they continue the downward slope.
-                label(x+12, yy+8, f"≈{round(value)}" if estimated else str(value), 22, color, "lm")
+                label(x+12, yy+8, f"≈{round(value)}" if estimated else str(value), 22, color, "lm",
+                      row=row, stage=2)
                 if estimated:
-                    label(x+12, yy+32, "assumed", 17, color, "lm")
+                    label(x+12, yy+32, "assumed", 17, color, "lm", row=row, stage=2)
     for row, (name, counts, color) in enumerate(series):
         ratios = (S_SHARE if row == 0 else O_SHARE, RATIO)
         for i, ratio in enumerate(ratios):
@@ -181,14 +185,82 @@ def option_a():
                 x = (start[0]+end[0])/2 + dy/length*offset*side
                 yy = (start[1]+end[1])/2 - dx/length*offset*side
                 if clear(label_box(x, yy, text, 20, "mm")):
-                    label(x, yy, text, 20, color)
+                    # A step's ratio appears once the line reaches that step's end.
+                    label(x, yy, text, 20, color, row=row, stage=i+1)
                     break
             else:
                 raise ValueError(f"No clear position for {text}")
     label(40, 490, "Same slope = same share kept, so the smaller October list compares fairly.", 16, MUTED, "lm")
     label(40, 514, "We don’t know which of the 84 attendees had email, so 62% is a rough guide.", 16, MUTED, "lm")
-    c.save("option-a-log-scale-three-stage-slopegraph.png", footer=False)
+
+    count = len(series)
+    travel = 1 - STAGGER * (count - 1)
+
+    def frame(overall):
+        """Draw one moment; reuses the existing GIF's stagger, easing and label fade."""
+        c = Canvas(width=width, height=height)
+        for start, end in guides:
+            c.line(start, end, fade(MUTED, 0.5), 1, dashed=True)
+        for row, (name, counts, color) in enumerate(series):
+            progress = line_progress(overall, row, count)
+            points = [(x, y(v)) for x, v in zip(xs, counts)]
+            tip_x = xs[0] + (xs[2] - xs[0]) * progress
+            for i in range(2):
+                (x0, y0), (x1, y1) = points[i], points[i+1]
+                if tip_x <= x0:
+                    break
+                share = min((tip_x - x0) / (x1 - x0), 1)
+                c.line((x0, y0), (x0 + (x1-x0)*share, y0 + (y1-y0)*share), color, 2,
+                       dashed=name == "Oct." and i == 1)
+            c.dot(*points[0], color, radius=3)
+            if progress >= 0.5:
+                c.dot(*points[1], color, radius=3)
+            if 0 < progress:
+                i = 0 if progress < 0.5 else 1
+                (x0, y0), (x1, y1) = points[i], points[i+1]
+                share = (tip_x - x0) / (x1 - x0)
+                c.dot(x0 + (x1-x0)*share, y0 + (y1-y0)*share, color,
+                      hollow=name == "Oct." and i == 1, radius=3)
+        for row, stage, x, yy, text, size, color, anchor in labels:
+            amount = 1
+            if row is not None:
+                # Stage 1 arrives halfway along the eased reveal; stage 2 arrives at the end.
+                arrived_at = STAGGER * row + travel * stage / 2
+                amount = (overall - arrived_at) / LABEL_FADE
+                if amount <= 0:
+                    continue
+            c.text(x, yy, text, size, fade(color, amount) if amount < 1 else color, anchor=anchor)
+        return c.image.resize((width, height), Image.Resampling.LANCZOS)
+
+    # Run past 1.0 so the last labels finish fading in before the final hold.
+    end = 1 + LABEL_FADE
+    still = HERE / "option-a-log-scale-three-stage-slopegraph.png"
+    frame(end).save(still)
+    print(f"Rendered {still.relative_to(ROOT)} ({width} × {height})")
     print(f"Option A: {len(boxes)} labels clear all four segments and three guides by at least 6 px; no text overlaps.")
+
+    encoder = shutil.which("gifski")
+    if encoder is None:
+        raise AnimationError("Cannot render Option A animation: install Gifski (brew install gifski on macOS)")
+    gif = HERE / "option-a-log-scale-three-stage-slopegraph.gif"
+    with tempfile.TemporaryDirectory(prefix="rsvp-funnel-") as directory:
+        paths = []
+        for step in range(MOTION_STEPS + 1):
+            path = Path(directory) / f"frame-{step:04d}.png"
+            frame(end * step / MOTION_STEPS).save(path, compress_level=1)
+            paths.append(str(path))
+        # Same holds as the existing slopegraph: a short opening pause and a long final hold.
+        inputs = paths[:1] * OPENING_HOLD_FRAMES + paths[1:-1] + paths[-1:] * FINAL_HOLD_FRAMES
+        result = subprocess.run(
+            [encoder, "--quiet", "--no-sort", "--fps", str(FPS), "--quality", "100",
+             "--motion-quality", "100", "--lossy-quality", "100", "--width", str(width),
+             "--height", str(height), "--repeat", "-1", "--output", str(gif), *inputs],
+            capture_output=True, text=True, check=False,
+        )
+    if result.returncode != 0:
+        raise AnimationError(f"Gifski failed: {result.stderr.strip() or result.stdout.strip()}")
+    seconds = (OPENING_HOLD_FRAMES + MOTION_STEPS - 1 + FINAL_HOLD_FRAMES) / FPS
+    print(f"Rendered {gif.relative_to(ROOT)} ({width} × {height}, {FPS} fps, {seconds:.2f} s, plays once)")
 
 
 def option_b():
