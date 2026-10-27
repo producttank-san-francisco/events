@@ -142,6 +142,7 @@ def option_a():
         boxes.append(box)
 
     label(40, 40, f"October is on pace for ≈{round(ESTIMATE)} attendees", 28, anchor="lm")
+    label(680, 40, "as of Oct. 27, 2026", 16, MUTED, "rm")
     for (start, end), text in zip(guides, ("RSVPs", "Email", "Attended")):
         c.line(start, end, fade(MUTED, 0.5), 1, dashed=True)
         label(start[0], axis_y, text, 17, MUTED)
@@ -177,9 +178,8 @@ def option_a():
                     break
             else:
                 raise ValueError(f"No clear position for {text}")
-    label(40, 472, "Same slope = same share kept, so the smaller October list compares fairly.", 16, MUTED, "lm")
-    label(40, 496, "We don’t know which of the 84 attendees had email, so 62% is a rough guide.", 16, MUTED, "lm")
-    label(40, 520, "October counts as of Oct. 27, 2026.", 16, MUTED, "lm")
+    label(40, 490, "Same slope = same share kept, so the smaller October list compares fairly.", 16, MUTED, "lm")
+    label(40, 514, "We don’t know which of the 84 attendees had email, so 62% is a rough guide.", 16, MUTED, "lm")
     c.save("option-a-log-scale-three-stage-slopegraph.png", footer=False)
     print(f"Option A: {len(boxes)} labels clear all four segments and three guides by at least 6 px; no text overlaps.")
 
