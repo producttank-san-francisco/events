@@ -17,6 +17,8 @@ All numbers live in [`docs/reports/rsvp-slopegraph/stats.json`](../../docs/repor
 
 The script rewrites `slopegraph.gif` and `report.md`. It computes RSVPs as named guests plus unnamed Meetup plus-ones. It estimates October attendance from September's unrounded turnout ratio, then rounds the estimated head count; only the displayed turnout percentage is rounded to a whole percent. The headline marks October RSVPs as a running count with “so far”. Count fields must be non-negative whole numbers.
 
+The GIF plays once and holds its final frame. Percentage labels show the RSVP and email-guest changes from September: `(October − September) / September × 100`. Line slopes show absolute head-count changes, not percentage changes. The attendance estimate uses all RSVPs, not just guests with email: `144 × (84 / 237) ≈ 51`.
+
 ## Tests
 
 ```bash

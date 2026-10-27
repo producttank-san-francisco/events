@@ -291,6 +291,15 @@ def render_frame(data: dict[str, Any], stats: Sequence[Stat], layout: Layout, ov
                 value=right_value(stat), name=right_name(stat),
                 value_color=fade(TEXT, reveal), name_color=fade(MUTED, reveal), fonts=fonts,
             )
+            if stat.name in ("RSVPs", "Guests with email"):
+                change = round((stat.october - stat.september) / stat.september * 100)
+                draw.text(
+                    ((layout.x_left + layout.x_right) / 2, (item.left_y + item.right_y) / 2 - 16 * scale),
+                    f"{change:+d}%".replace("-", "−"),
+                    fill=fade(TEXT, reveal),
+                    font=fonts.label,
+                    anchor="mm",
+                )
 
     rate = round(turnout_rate(september) * 100)
     draw.text(
@@ -337,7 +346,7 @@ def render_slopegraph_gif(data: dict[str, Any]) -> bytes:
             "--lossy-quality", "100",
             "--width", str(WIDTH),
             "--height", str(HEIGHT),
-            "--repeat", "0",
+            "--repeat", "-1",
             "--output", str(output_path),
             *inputs,
         ]
