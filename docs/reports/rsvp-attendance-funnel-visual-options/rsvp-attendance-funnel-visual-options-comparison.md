@@ -4,7 +4,7 @@
 
 **Selected: A, the three-stage slopegraph.** Wesley chose A in A1 and asked for less clutter, a narrower image and labels that do not collide with lines. That choice supersedes the initial recommendation of B.
 
-Option A is now **720 × 570**, 40% narrower than the original 1200-pixel image. B and C remain static 1200 × 1040 comparison images. A keeps the count paths, four ratio labels, a short scale/caution note and the snapshot time. The brand, study badge, large headline, repeated formulas, axis ticks and long footer were removed from A; exact arithmetic and full caveats remain below. All options reuse the existing palette and font loader, with direct labels and no legend or gridlines. No final animation has been built.
+Option A is now **720 × 550**, 40% narrower than the original 1200-pixel image. B and C remain static 1200 × 1040 comparison images. A leads with its takeaway (“October is on pace for about 49 attendees”), labels stages directly on September’s points, shows whole-number percentages and ends with three plain-language notes. The brand, study badge, stage header row, repeated formulas, axis ticks and long footer were removed from A; exact arithmetic and full caveats remain below. All options reuse the existing palette and font loader, with direct labels and no legend or gridlines. No final animation has been built.
 
 ## Counts and snapshot
 
@@ -36,7 +36,7 @@ Fractions below are exact. Decimals with an ellipsis continue; headline percenta
 | PR #7 estimate using total RSVPs | 144 × 84/237 = 4032/79 | 51.037974683544303… → about **51** |
 | RSVP-based estimate minus email-based estimate | 4032/79 − 840/17 = 2184/1343 | 1.626209977661950… people |
 
-**“About the same percentage drop” is fair; “the same percentage drop” is not.** October retains a smaller email share by exactly 1300/711 percentage points. The displayed 57.4% and 55.6% preserve that distinction.
+**“About the same percentage drop” is fair; “the same percentage drop” is not.** October retains a smaller email share by exactly 1300/711 percentage points. B and C show 57.4% and 55.6%; A’s whole-number 57% and 56% still preserve that distinction.
 
 ### Why 49 and 51 differ
 
@@ -54,13 +54,13 @@ Fractions below are exact. Decimals with an ellipsis continue; headline percenta
 
 ## Option A — log-scale three-stage slopegraph
 
-![Option A: September and October counts across RSVPs, with email and attendance, on a labeled log scale; October’s estimated last step is dashed.](option-a-log-scale-three-stage-slopegraph.png)
+![Option A: September and October counts across RSVPs, with email and attendance, with stage names on September’s points; October’s estimated last step is dashed.](option-a-log-scale-three-stage-slopegraph.png)
 
 **What a viewer gets in five seconds:** both months lose a similar proportion between RSVPs and email guests; extending October with September’s next ratio gives about 49 attendees. Counts remain visible throughout.
 
 **Organizing principle:** follow each month left to right. Equally spaced stages and one shared logarithmic count mapping make equal proportional changes parallel; no points are nudged away from their values.
 
-**Honesty risks:** a log scale is unfamiliar and has no zero. Equal visual distances mean equal multipliers, not equal numbers of people. The compact chart names the log scale and labels every count directly; it does not need a second count axis. The first steps are nearly, not exactly, parallel. The 57.4% and 55.6% labels show that difference; its exact size is in the arithmetic table above. A three-stage line can suggest a tracked group, so the chart retains the warning that 84/136 is an aggregate ratio, not a conversion rate. Dashed October attendance, its hollow endpoint and “61.8% assumed” mark the assumption. The endpoint is plotted at the unrounded 840/17 and labeled approximately 49.
+**Honesty risks:** a log scale is unfamiliar and has no zero. Equal visual distances mean equal multipliers, not equal numbers of people. The chart says this plainly (“same slope = same share kept”) instead of naming the scale, and labels every count directly; it does not need a count axis. The first steps are nearly, not exactly, parallel. The whole-percent labels 57% and 56% still show that difference; its exact size is in the arithmetic table above. A three-stage line can suggest a tracked group, so the chart says we don’t know which of the 84 attendees had email, making 62% a rough guide. Dashed October attendance, its hollow endpoint and “62% assumed” mark the assumption. The endpoint is plotted at the unrounded 840/17 and labeled approximately 49.
 
 **Effort to animate like the existing GIF:** low to medium. Reuse the reveal, dash treatment, font loader and GIF encoding, with the compact three-column layout and fixed log mapping. Label positions now use measured text bounds checked against every line segment and every other label. Ratio labels move above the slope until they have room; no background patch hides a line. Retain these fixed positions during a reveal. No animation has been implemented.
 
@@ -98,8 +98,8 @@ python3 -B docs/reports/rsvp-attendance-funnel-visual-options/render_options.py
 
 The [render script](render_options.py) reads the saved stats, imports the existing palette/font loader, uses exact rational arithmetic until drawing, and writes only the three PNGs beside itself. It does not update the source report, stats, GIF or Google Sheet. Layout and copy are mockups for this snapshot, not a hardened general-purpose chart API.
 
-Verification performed: ran the renderer after the compact revision and opened the new A PNG for visual inspection. A rendered at 720 × 570; all 16 text labels passed the render-time check for at least six pixels of clearance from all four full line segments, with no text overlaps. Text bounds also passed the canvas-edge check. B and C still rendered at 1200 × 1040. No test suite was run, as requested. Static mockups only; no animation timing or device-specific display check is claimed.
+Verification performed: ran the renderer after the second compact revision and opened the new A PNG for visual inspection. A rendered at 720 × 550; all 14 text labels passed the render-time check for at least six pixels of clearance from all four full line segments, with no text overlaps. Text bounds also passed the canvas-edge check. B and C still rendered at 1200 × 1040. No test suite was run, as requested. Static mockups only; no animation timing or device-specific display check is claimed.
 
 ## Selected design
 
-A1 is resolved: **A — follow each month’s count path**, with less clutter, a narrower layout and labels clear of lines. The refined A image is embedded above. B and C remain here as the alternatives considered, not as open choices. Both attendance formulas and the complete snapshot caveats remain in this report rather than on the compact chart.
+A1 is resolved: **A — follow each month’s count path**, with less clutter, a narrower layout and labels clear of lines. A second pass replaced the topic title with the takeaway, put stage names on September’s points instead of a header row, rounded percentages to whole numbers and rewrote the notes in plain words. The refined A image is embedded above. B and C remain here as the alternatives considered, not as open choices. Both attendance formulas and the complete snapshot caveats remain in this report rather than on the compact chart.
