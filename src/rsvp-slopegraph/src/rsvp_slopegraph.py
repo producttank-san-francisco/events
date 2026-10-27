@@ -76,8 +76,8 @@ def rsvps(event: dict[str, Any]) -> int:
 
 
 def turnout_rate(september: dict[str, Any]) -> float:
-    """September turnout, rounded to whole percent so the footnote and estimate agree."""
-    return round(september["attended"] / rsvps(september) * 100) / 100
+    """September turnout as an unrounded ratio."""
+    return september["attended"] / rsvps(september)
 
 
 def load_stats(path: Path) -> dict[str, Any]:
@@ -90,6 +90,11 @@ def load_stats(path: Path) -> dict[str, Any]:
         missing = [key for key in keys if key not in data.get(event, {})]
         if missing:
             raise ValueError(f"{path}: {event} is missing {', '.join(missing)}")
+        for key in ("named_guests", "guests_with_email", "unnamed_plus_ones", "attended"):
+            if key in keys:
+                value = data[event][key]
+                if type(value) is not int or value < 0:
+                    raise ValueError(f"{path}: {event}.{key} must be a non-negative whole number")
     return data
 
 
@@ -177,7 +182,7 @@ def right_name(stat: Stat) -> str:
 def headline(stats: Sequence[Stat]) -> str:
     total = stats[0]
     change = round((total.october - total.september) / total.september * 100)
-    return f"October RSVPs are {'down' if change < 0 else 'up'} {abs(change)}%."
+    return f"October RSVPs are {'down' if change < 0 else 'up'} {abs(change)}% so far."
 
 
 def plan_layout(stats: Sequence[Stat], fonts: Fonts, draw: ImageDraw.ImageDraw) -> Layout:
@@ -226,7 +231,7 @@ def draw_label(
     scale = RENDER_SCALE
     value_width = draw.textlength(value, font=fonts.label)
     space = draw.textlength("  ", font=fonts.axis)
-    nudged = abs(label_y - line_y) > scale
+    nudged = abs(label_y - line_y) > LABEL_GAP * scale / 3
     sign = -1 if left else 1
     edge = anchor_x + sign * (20 if nudged else 10) * scale
     if nudged:

@@ -15,7 +15,7 @@ All numbers live in [`docs/reports/rsvp-slopegraph/stats.json`](../../docs/repor
    ./src/rsvp-slopegraph/src/rsvp_slopegraph.py
    ```
 
-The script rewrites `slopegraph.gif` and `report.md`. It computes RSVPs as named guests plus unnamed Meetup plus-ones. It estimates October attendance by applying September's turnout, rounded to a whole percent, to October RSVPs.
+The script rewrites `slopegraph.gif` and `report.md`. It computes RSVPs as named guests plus unnamed Meetup plus-ones. It estimates October attendance from September's unrounded turnout ratio, then rounds the estimated head count; only the displayed turnout percentage is rounded to a whole percent. The headline marks October RSVPs as a running count with “so far”. Count fields must be non-negative whole numbers.
 
 ## Tests
 
