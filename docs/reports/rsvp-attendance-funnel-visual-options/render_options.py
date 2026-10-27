@@ -115,16 +115,22 @@ def option_a():
         ((xs[i], y(counts[i])), (xs[i+1], y(counts[i+1])))
         for _, counts, _ in series for i in range(2)
     ]
-    # Dashed guides drop from each column's lowest dot to its stage name on the shared axis row.
-    guides = [
-        ((x, max(y(counts[i]) for _, counts, _ in series) + 6), (x, axis_y - 18))
-        for i, x in enumerate(xs)
-    ]
     boxes = []
 
     def label_box(x, yy, text, size, anchor):
         bounds = c.draw.textbbox((x*SCALE, yy*SCALE), text, font=FONTS[size], anchor=anchor)
         return tuple(v/SCALE for v in bounds)
+
+    # September's labels sit above its line; October's sit below its line.
+    value_offset = {"Sept.": -26, "Oct.": 30}
+    oct_value_bottom = label_box(xs[1], y(O_EMAIL) + value_offset["Oct."], str(O_EMAIL), 22, "mm")[3]
+    # Dashed guides rise from the shared axis row to each column's lowest dot, or stop short of
+    # October's middle count label with a small gap.
+    guides = [
+        ((x, oct_value_bottom + 8 if i == 1 else max(y(counts[i]) for _, counts, _ in series) + 6),
+         (x, axis_y - 18))
+        for i, x in enumerate(xs)
+    ]
 
     def clear(box):
         expanded = (box[0]-6, box[1]-6, box[2]+6, box[3]+6)
@@ -157,7 +163,7 @@ def option_a():
             if i == 0:
                 label(x-12, yy, f"{name} {value}", 20, color, "rm")
             elif i == 1:
-                label(x, yy-26, str(value), 22, color)
+                label(x, yy + value_offset[name], str(value), 22, color)
             else:
                 # Drop end labels slightly so they continue the downward slope.
                 label(x+12, yy+8, f"≈{round(value)}" if estimated else str(value), 22, color, "lm")
@@ -170,9 +176,10 @@ def option_a():
             dx, dy = end[0]-start[0], end[1]-start[1]
             length = math.hypot(dx, dy)
             text = f"{round(float(ratio) * 100)}%"
+            side = 1 if row == 0 else -1
             for offset in range(24, 121, 4):
-                x = (start[0]+end[0])/2 + dy/length*offset
-                yy = (start[1]+end[1])/2 - dx/length*offset
+                x = (start[0]+end[0])/2 + dy/length*offset*side
+                yy = (start[1]+end[1])/2 - dx/length*offset*side
                 if clear(label_box(x, yy, text, 20, "mm")):
                     label(x, yy, text, 20, color)
                     break
