@@ -20,7 +20,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path.insert(0, str(ROOT / "src/rsvp-slopegraph/src"))
 from rsvp_slopegraph import (  # noqa: E402
-    BACKGROUND, CLONES, MUTED, RENDER_SCALE, TEXT, VIEWS, load_font,
+    BACKGROUND, CLONES, MUTED, RENDER_SCALE, TEXT, VIEWS, load_font, segment_hits_box,
 )
 
 DATA = json.loads((ROOT / "docs/reports/rsvp-slopegraph/stats.json").read_text())
@@ -44,19 +44,21 @@ def pct(value: Fraction) -> str:
 
 
 class Canvas:
-    def __init__(self, option: str, title: str, subtitle: str):
-        self.image = Image.new("RGB", (W * SCALE, H * SCALE), BACKGROUND)
+    def __init__(self, option="", title="", subtitle="", *, width=W, height=H):
+        self.width, self.height = width, height
+        self.image = Image.new("RGB", (width * SCALE, height * SCALE), BACKGROUND)
         self.draw = ImageDraw.Draw(self.image)
-        self.text(64, 38, "ProductTank SF · September / October 2026", 18, MUTED)
-        self.text(1136, 38, f"{option} · STATIC STUDY", 15, MUTED, anchor="ra")
-        self.text(64, 91, title, 40, bold=True)
-        self.text(64, 149, subtitle, 22, MUTED)
+        if option:
+            self.text(64, 38, "ProductTank SF · September / October 2026", 18, MUTED)
+            self.text(1136, 38, f"{option} · STATIC STUDY", 15, MUTED, anchor="ra")
+            self.text(64, 91, title, 40, bold=True)
+            self.text(64, 149, subtitle, 22, MUTED)
 
     def text(self, x, y, text, size=20, color=TEXT, *, bold=False, anchor="la"):
         font = (BOLD if bold else FONTS)[size]
         position = (x * SCALE, y * SCALE)
         box = self.draw.textbbox(position, text, font=font, anchor=anchor)
-        if box[0] < 0 or box[1] < 0 or box[2] > W * SCALE or box[3] > H * SCALE:
+        if box[0] < 0 or box[1] < 0 or box[2] > self.width * SCALE or box[3] > self.height * SCALE:
             raise ValueError(f"Text outside canvas: {text!r}, {box}")
         self.draw.text(position, text, fill=color, font=font, anchor=anchor)
 
@@ -87,44 +89,87 @@ class Canvas:
         self.text(64, 964, f"RSVPs: September {SEP['named_guests']} named + {SEP['unnamed_plus_ones']} plus-ones; October {OCT['named_guests']} + {OCT['unnamed_plus_ones']}.", 17, MUTED)
         self.text(64, 991, "Later build notes report 133 named guests; this comparison deliberately retains the saved 132-row snapshot.", 17, MUTED)
 
-    def save(self, name):
-        self.footer()
-        image = self.image.resize((W, H), Image.Resampling.LANCZOS)
+    def save(self, name, *, footer=True):
+        if footer:
+            self.footer()
+        image = self.image.resize((self.width, self.height), Image.Resampling.LANCZOS)
         path = HERE / name
         image.save(path)
-        print(f"Rendered {path.relative_to(ROOT)} ({W} × {H})")
+        print(f"Rendered {path.relative_to(ROOT)} ({self.width} × {self.height})")
 
 
 def option_a():
-    c = Canvas("A", "Similar proportional drops; about 49 attendees assumed.",
-               "Follow each month across the counts. Only October’s attendance step is assumed.")
-    xs = (260, 640, 1020)
-    for x, label in zip(xs, ("RSVPs", "With email", "Attended")):
-        c.text(x, 211, label, 22, anchor="ma", bold=True)
+    c = Canvas(width=720, height=570)
+    xs = (160, 380, 600)
+
     def y(value):
-        return 650 - math.log(float(value) / 40) / math.log(260 / 40) * 390
-    for tick in (40, 80, 160):
-        c.text(115, y(tick), str(tick), 17, MUTED, anchor="rm")
-        c.line((126, y(tick)), (134, y(tick)))
-    c.text(74, 239, "People", 17, MUTED)
-    for name, counts, color in (("September", (S_TOTAL, S_EMAIL, ATTENDED), SEPT_COLOR),
-                                 ("October", (O_TOTAL, O_EMAIL, ESTIMATE), OCT_COLOR)):
+        return 470 - math.log(float(value) / 40) / math.log(260 / 40) * 310
+
+    series = (
+        ("Sept.", (S_TOTAL, S_EMAIL, ATTENDED), SEPT_COLOR),
+        ("Oct.", (O_TOTAL, O_EMAIL, ESTIMATE), OCT_COLOR),
+    )
+    segments = [
+        ((xs[i], y(counts[i])), (xs[i+1], y(counts[i+1])))
+        for _, counts, _ in series for i in range(2)
+    ]
+    boxes = []
+
+    def label_box(x, yy, text, size, anchor):
+        bounds = c.draw.textbbox((x*SCALE, yy*SCALE), text, font=FONTS[size], anchor=anchor)
+        return tuple(v/SCALE for v in bounds)
+
+    def clear(box):
+        expanded = (box[0]-6, box[1]-6, box[2]+6, box[3]+6)
+        return (
+            not any(segment_hits_box(start, end, expanded) for start, end in segments)
+            and not any(box[0]-3 < b[2] and box[2]+3 > b[0]
+                        and box[1]-3 < b[3] and box[3]+3 > b[1] for b in boxes)
+        )
+
+    def label(x, yy, text, size=20, color=TEXT, anchor="mm"):
+        box = label_box(x, yy, text, size, anchor)
+        if not clear(box):
+            raise ValueError(f"Label has insufficient line or text clearance: {text}")
+        c.text(x, yy, text, size, color, anchor=anchor)
+        boxes.append(box)
+
+    label(40, 34, "RSVPs → email → attendance", 28, anchor="lm")
+    for x, text in zip(xs, ("RSVPs", "With email", "Attended")):
+        label(x, 100, text, 20, MUTED)
+    for name, counts, color in series:
         ys = [y(v) for v in counts]
-        c.text(xs[0]-16, ys[0]-24, f"{name} · {counts[0]}", 22, color, anchor="ra", bold=True)
         for i in range(2):
-            c.line((xs[i], ys[i]), (xs[i+1], ys[i+1]), color, 3, dashed=name == "October" and i == 1)
+            c.line((xs[i], ys[i]), (xs[i+1], ys[i+1]), color, 2,
+                   dashed=name == "Oct." and i == 1)
         for i, (x, yy, value) in enumerate(zip(xs, ys, counts)):
-            estimated = name == "October" and i == 2
-            c.dot(x, yy, color, hollow=estimated)
-            if i:
-                label = f"{float(value):.1f} estimate" if estimated else str(value)
-                c.text(x+13, yy-35, label, 22, color, bold=True)
-        first_share = S_SHARE if name == "September" else O_SHARE
-        c.text((xs[0]+xs[1])/2, (ys[0]+ys[1])/2-53, f"{pct(first_share)} retained", 20, color, anchor="ma")
-        c.text((xs[1]+xs[2])/2, (ys[1]+ys[2])/2-53,
-               f"{pct(RATIO)} {'assumed' if name == 'October' else 'ratio'}", 20, color, anchor="ma")
-    c.text(64, 693, f"Log count scale: equal percentage drops have equal slopes. Email-share gap: {float(GAP):.4f}… points.", 18, MUTED)
-    c.save("option-a-log-scale-three-stage-slopegraph.png")
+            estimated = name == "Oct." and i == 2
+            c.dot(x, yy, color, hollow=estimated, radius=3)
+            if i == 0:
+                label(x-12, yy, f"{name} {value}", 20, color, "rm")
+            elif i == 1:
+                label(x, yy-30, str(value), 22, color)
+            else:
+                label(x+12, yy, f"≈{round(value)}" if estimated else str(value), 22, color, "lm")
+    for row, (name, counts, color) in enumerate(series):
+        ratios = (S_SHARE if row == 0 else O_SHARE, RATIO)
+        for i, ratio in enumerate(ratios):
+            start, end = segments[row*2+i]
+            dx, dy = end[0]-start[0], end[1]-start[1]
+            length = math.hypot(dx, dy)
+            text = pct(ratio) + (" assumed" if row == 1 and i == 1 else "")
+            for offset in range(24, 121, 4):
+                x = (start[0]+end[0])/2 + dy/length*offset
+                yy = (start[1]+end[1])/2 - dx/length*offset
+                if clear(label_box(x, yy, text, 20, "mm")):
+                    label(x, yy, text, 20, color)
+                    break
+            else:
+                raise ValueError(f"No clear position for {text}")
+    label(40, 510, "Log scale · 84/136 is a ratio, not a conversion rate.", 17, MUTED, "lm")
+    label(40, 540, "October snapshot: Oct. 27, 2026, 10:50 a.m. PDT.", 17, MUTED, "lm")
+    c.save("option-a-log-scale-three-stage-slopegraph.png", footer=False)
+    print(f"Option A: {len(boxes)} labels clear all four segments by at least 6 px; no text overlaps.")
 
 
 def option_b():
