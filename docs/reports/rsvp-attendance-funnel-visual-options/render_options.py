@@ -20,7 +20,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path.insert(0, str(ROOT / "src/rsvp-slopegraph/src"))
 from rsvp_slopegraph import (  # noqa: E402
-    BACKGROUND, CLONES, MUTED, RENDER_SCALE, TEXT, VIEWS, load_font, segment_hits_box,
+    BACKGROUND, CLONES, MUTED, RENDER_SCALE, TEXT, VIEWS, fade, load_font, segment_hits_box,
 )
 
 DATA = json.loads((ROOT / "docs/reports/rsvp-slopegraph/stats.json").read_text())
@@ -103,7 +103,9 @@ def option_a():
     xs = (169, 374, 579)
 
     def y(value):
-        return 430 - math.log(float(value) / 40) / math.log(260 / 40) * 310
+        return 400 - math.log(float(value) / 40) / math.log(260 / 40) * 310
+
+    axis_y = 430
 
     series = (
         ("Sept.", (S_TOTAL, S_EMAIL, ATTENDED), SEPT_COLOR),
@@ -112,6 +114,11 @@ def option_a():
     segments = [
         ((xs[i], y(counts[i])), (xs[i+1], y(counts[i+1])))
         for _, counts, _ in series for i in range(2)
+    ]
+    # Dashed guides drop from each column's lowest dot to its stage name on the shared axis row.
+    guides = [
+        ((x, max(y(counts[i]) for _, counts, _ in series) + 6), (x, axis_y - 18))
+        for i, x in enumerate(xs)
     ]
     boxes = []
 
@@ -122,7 +129,7 @@ def option_a():
     def clear(box):
         expanded = (box[0]-6, box[1]-6, box[2]+6, box[3]+6)
         return (
-            not any(segment_hits_box(start, end, expanded) for start, end in segments)
+            not any(segment_hits_box(start, end, expanded) for start, end in segments + guides)
             and not any(box[0]-3 < b[2] and box[2]+3 > b[0]
                         and box[1]-3 < b[3] and box[3]+3 > b[1] for b in boxes)
         )
@@ -135,6 +142,9 @@ def option_a():
         boxes.append(box)
 
     label(40, 40, f"October is on pace for ≈{round(ESTIMATE)} attendees", 28, anchor="lm")
+    for (start, end), text in zip(guides, ("RSVPs", "Email", "Attended")):
+        c.line(start, end, fade(MUTED, 0.5), 1, dashed=True)
+        label(start[0], axis_y, text, 17, MUTED)
     for name, counts, color in series:
         ys = [y(v) for v in counts]
         for i in range(2):
@@ -143,20 +153,13 @@ def option_a():
         for i, (x, yy, value) in enumerate(zip(xs, ys, counts)):
             estimated = name == "Oct." and i == 2
             c.dot(x, yy, color, hollow=estimated, radius=3)
-            stage = name == "Sept."
             if i == 0:
                 label(x-12, yy, f"{name} {value}", 20, color, "rm")
-                if stage:
-                    label(x, yy-30, "RSVPs", 17, MUTED)
             elif i == 1:
                 label(x, yy-26, str(value), 22, color)
-                if stage:
-                    label(x, yy-56, "Email", 17, MUTED)
             else:
                 # Drop end labels slightly so they continue the downward slope.
                 label(x+12, yy+8, f"≈{round(value)}" if estimated else str(value), 22, color, "lm")
-                if stage:
-                    label(x, yy-30, "Attended", 17, MUTED)
                 if estimated:
                     label(x+12, yy+32, "assumed", 17, color, "lm")
     for row, (name, counts, color) in enumerate(series):
@@ -174,11 +177,11 @@ def option_a():
                     break
             else:
                 raise ValueError(f"No clear position for {text}")
-    label(40, 466, "Same slope = same share kept, so the smaller October list compares fairly.", 16, MUTED, "lm")
-    label(40, 491, "We don’t know which of the 84 attendees had email, so 62% is a rough guide.", 16, MUTED, "lm")
-    label(40, 516, "October counts as of Oct. 27, 2026.", 16, MUTED, "lm")
+    label(40, 472, "Same slope = same share kept, so the smaller October list compares fairly.", 16, MUTED, "lm")
+    label(40, 496, "We don’t know which of the 84 attendees had email, so 62% is a rough guide.", 16, MUTED, "lm")
+    label(40, 520, "October counts as of Oct. 27, 2026.", 16, MUTED, "lm")
     c.save("option-a-log-scale-three-stage-slopegraph.png", footer=False)
-    print(f"Option A: {len(boxes)} labels clear all four segments by at least 6 px; no text overlaps.")
+    print(f"Option A: {len(boxes)} labels clear all four segments and three guides by at least 6 px; no text overlaps.")
 
 
 def option_b():
