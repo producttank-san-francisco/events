@@ -35,7 +35,7 @@ ALTERNATE = O_TOTAL * Fraction(ATTENDED, S_TOTAL)
 GAP = (S_SHARE - O_SHARE) * 100
 W, H, SCALE = 1200, 1040, RENDER_SCALE
 SEPT_COLOR, OCT_COLOR = CLONES, VIEWS
-FONTS = {size: load_font(size) for size in (15, 17, 18, 20, 22, 24, 28, 32, 40)}
+FONTS = {size: load_font(size) for size in (15, 16, 17, 18, 20, 22, 24, 28, 32, 40)}
 BOLD = {size: load_font(size, bold=True) for size in (18, 20, 22, 24, 28, 32, 40)}
 
 
@@ -99,7 +99,7 @@ class Canvas:
 
 
 def option_a():
-    c = Canvas(width=720, height=550)
+    c = Canvas(width=720, height=540)
     xs = (169, 374, 579)
 
     def y(value):
@@ -134,7 +134,7 @@ def option_a():
         c.text(x, yy, text, size, color, anchor=anchor)
         boxes.append(box)
 
-    label(40, 40, f"October is on pace for about {round(ESTIMATE)} attendees", 28, anchor="lm")
+    label(40, 40, f"October is on pace for ≈{round(ESTIMATE)} attendees", 28, anchor="lm")
     for name, counts, color in series:
         ys = [y(v) for v in counts]
         for i in range(2):
@@ -143,21 +143,29 @@ def option_a():
         for i, (x, yy, value) in enumerate(zip(xs, ys, counts)):
             estimated = name == "Oct." and i == 2
             c.dot(x, yy, color, hollow=estimated, radius=3)
-            sept = name == "Sept."
+            stage = name == "Sept."
             if i == 0:
-                label(x-12, yy, f"{name} {value}" + (" RSVPs" if sept else ""), 20, color, "rm")
+                label(x-12, yy, f"{name} {value}", 20, color, "rm")
+                if stage:
+                    label(x-12, yy-24, "RSVPs", 17, MUTED, "rm")
             elif i == 1:
-                label(x+6, yy-10, f"{value}" + (" with email" if sept else ""), 22, color, "ld")
+                label(x, yy-26, str(value), 22, color)
+                if stage:
+                    label(x, yy-50, "Email", 17, MUTED)
             else:
-                text = f"≈{round(value)}" if estimated else f"{value} attended"
-                label(x+12, yy, text, 22, color, "lm")
+                # Drop end labels slightly so they continue the downward slope.
+                label(x+12, yy+8, f"≈{round(value)}" if estimated else str(value), 22, color, "lm")
+                if stage:
+                    label(x+12, yy-16, "Attended", 17, MUTED, "lm")
+                if estimated:
+                    label(x+12, yy+32, "assumed", 17, color, "lm")
     for row, (name, counts, color) in enumerate(series):
         ratios = (S_SHARE if row == 0 else O_SHARE, RATIO)
         for i, ratio in enumerate(ratios):
             start, end = segments[row*2+i]
             dx, dy = end[0]-start[0], end[1]-start[1]
             length = math.hypot(dx, dy)
-            text = f"{round(float(ratio) * 100)}%" + (" assumed" if row == 1 and i == 1 else "")
+            text = f"{round(float(ratio) * 100)}%"
             for offset in range(24, 121, 4):
                 x = (start[0]+end[0])/2 + dy/length*offset
                 yy = (start[1]+end[1])/2 - dx/length*offset
@@ -166,9 +174,9 @@ def option_a():
                     break
             else:
                 raise ValueError(f"No clear position for {text}")
-    label(40, 466, "Same slope = same share kept, so the smaller October list compares fairly.", 17, MUTED, "lm")
-    label(40, 493, "We don’t know which of the 84 attendees had email, so 62% is a rough guide.", 17, MUTED, "lm")
-    label(40, 520, "October counts as of Oct. 27, 2026, 10:50 a.m. PDT.", 17, MUTED, "lm")
+    label(40, 466, "Same slope = same share kept, so the smaller October list compares fairly.", 16, MUTED, "lm")
+    label(40, 491, "We don’t know which of the 84 attendees had email, so 62% is a rough guide.", 16, MUTED, "lm")
+    label(40, 516, "October counts as of Oct. 27, 2026.", 16, MUTED, "lm")
     c.save("option-a-log-scale-three-stage-slopegraph.png", footer=False)
     print(f"Option A: {len(boxes)} labels clear all four segments by at least 6 px; no text overlaps.")
 
