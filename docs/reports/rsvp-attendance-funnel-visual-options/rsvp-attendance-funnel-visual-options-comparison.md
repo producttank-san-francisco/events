@@ -32,8 +32,8 @@ Fractions below are exact. Decimals with an ellipsis continue; headline percenta
 | October drop, RSVPs → with email | 64/144 = 4/9 | 44.444444444444444…% |
 | Email-share gap, September minus October | 100 × (136/237 − 5/9) = 1300/711 | 1.828410689170182… percentage points |
 | September attendees per guest with email | 84/136 = 21/34 | 61.764705882352941…% |
-| October estimate using email counts | 80 × 21/34 = 840/17 | 49.411764705882352… → about **49** |
-| October estimate using total RSVPs | 144 × 84/237 = 4032/79 | 51.037974683544303… → about **51** |
+| October email-based alternative to PR #7 | 80 × 21/34 = 840/17 | 49.411764705882352… → about **49** |
+| PR #7 estimate using total RSVPs | 144 × 84/237 = 4032/79 | 51.037974683544303… → about **51** |
 | RSVP-based estimate minus email-based estimate | 4032/79 − 840/17 = 2184/1343 | 1.626209977661950… people |
 
 **“About the same percentage drop” is fair; “the same percentage drop” is not.** October retains a smaller email share by exactly 1300/711 percentage points. The displayed 57.4% and 55.6% preserve that distinction.
@@ -43,7 +43,7 @@ Fractions below are exact. Decimals with an ellipsis continue; headline percenta
 - **49** scales attendance with the email-guest count: October has 80/136 as many email guests as September.
 - **51** scales attendance with all RSVPs: October has 144/237 as many RSVPs as September.
 - Since October’s email share is slightly lower, the email-based method yields the lower estimate. They would agree if the email shares were identical.
-- **Worktree correction:** the supplied brief called 51 the current PR estimate. This worktree’s [renderer instructions](../../../src/rsvp-slopegraph/README.md#Update%20the%20numbers) and [saved report](../rsvp-slopegraph/report.md#ProductTank%20SF%20September%20vs.%20October%20RSVPs) already use the email-based estimate of about 49. Here, 51 is a comparison method, not a claim about the current PR or remote branch.
+- **PR #7 versus this branch:** PR #7’s final head, `2be052039587a2ab31c8cf2c3eb689effe548d6d`, uses the RSVP-based estimate of **about 51**. Its [renderer](https://github.com/producttank-san-francisco/events/blob/2be052039587a2ab31c8cf2c3eb689effe548d6d/src/rsvp-slopegraph/src/rsvp_slopegraph.py) computes `round(rsvps(october) * turnout_rate(september))`, where turnout is `84/237`; its [saved report](https://github.com/producttank-san-francisco/events/blob/2be052039587a2ab31c8cf2c3eb689effe548d6d/docs/reports/rsvp-slopegraph/report.md) shows `~51`. Its [stats.json](https://github.com/producttank-san-francisco/events/blob/2be052039587a2ab31c8cf2c3eb689effe548d6d/docs/reports/rsvp-slopegraph/stats.json) contains the same observed input counts, not a stored October attendance estimate. The **49** email-based method is the alternative to that PR. This worktree already includes the PR’s final head **plus** the later email-based change `dc44c7f`, reflected in its [renderer instructions](../../../src/rsvp-slopegraph/README.md#Update%20the%20numbers). After `git fetch origin`, `git merge-base --is-ancestor 2be0520 HEAD` succeeded, so this branch was not older and no merge was needed. The earlier wording that treated this worktree’s 49 as a correction to the brief’s PR value was wrong; the two branch states differ.
 
 ## Assumptions and limits
 

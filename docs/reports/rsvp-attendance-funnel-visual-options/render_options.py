@@ -75,9 +75,9 @@ class Canvas:
         self.draw.ellipse(bounds, fill=BACKGROUND if hollow else color, outline=color, width=2 * SCALE)
 
     def footer(self):
-        self.text(64, 744, "Email-based estimate", 18, MUTED)
+        self.text(64, 744, "Email-based alternative to PR #7", 18, MUTED)
         self.text(64, 775, f"{O_EMAIL} × ({ATTENDED}/{S_EMAIL}) = {ESTIMATE} = {float(ESTIMATE):.10f}… → about {round(ESTIMATE)}", 28, OCT_COLOR, bold=True)
-        self.text(64, 825, f"RSVP-based comparison: {O_TOTAL} × ({ATTENDED}/{S_TOTAL}) = {ALTERNATE} = {float(ALTERNATE):.10f}… → about {round(ALTERNATE)}", 20, MUTED)
+        self.text(64, 825, f"PR #7, RSVP-based: {O_TOTAL} × ({ATTENDED}/{S_TOTAL}) = {ALTERNATE} = {float(ALTERNATE):.10f}… → about {round(ALTERNATE)}", 20, MUTED)
         self.text(64, 861, "84 is a door head count, not verified attendance among the 136 email guests.", 18)
         self.text(64, 889, "84/136 is an aggregate ratio—not an email-guest conversion rate. October reuses it as an assumption.", 18, MUTED)
         as_of = datetime.fromisoformat(OCT["as_of"].replace("Z", "+00:00"))
