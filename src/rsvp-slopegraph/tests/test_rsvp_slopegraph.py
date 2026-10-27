@@ -10,7 +10,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.rsvp_slopegraph import (
-    build_stats, load_fonts, load_stats, plan_layout, right_name, right_value, spread_labels,
+    RENDER_SCALE, build_stats, load_fonts, load_stats, plan_layout, right_name, right_value, segment_hits_box,
+    spread_labels,
 )
 
 
@@ -62,12 +63,26 @@ class SpreadLabelsTest(unittest.TestCase):
             for above, below in zip(boxes, boxes[1:]):
                 self.assertLessEqual(above[1], below[0])
 
+    def test_change_labels_clear_every_line(self):
+        draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+        layout = plan_layout(build_stats(sample_data()), load_fonts(), draw)
+        self.assertEqual([label.text for label in layout.changes], ["−39%", "−41%"])
+        segments = [((layout.x_left, item.left_y), (layout.x_right, item.right_y)) for item in layout.placed]
+        for label in layout.changes:
+            left, top, right, bottom = draw.textbbox((label.x, label.y), label.text, font=layout.change_font, anchor="mm")
+            # Lines are 3 px wide, so the drawn stroke must stay outside the box grown by half its width.
+            pad = 1.5 * RENDER_SCALE
+            box = (left - pad, top - pad, right + pad, bottom + pad)
+            for start, end in segments:
+                self.assertFalse(segment_hits_box(start, end, box), label.text)
+
 
 class StatsTest(unittest.TestCase):
-    def test_rsvps_add_plus_ones_and_attendance_uses_september_turnout(self):
+    def test_rsvps_add_plus_ones_and_attendance_scales_by_email_guests(self):
         stats = {stat.name: stat for stat in build_stats(sample_data())}
         self.assertEqual((stats["RSVPs"].september, stats["RSVPs"].october), (237, 144))
-        self.assertEqual(stats["Attended"].october, 51)
+        # 80 email guests × (84 attended / 136 email guests) = 49.4.
+        self.assertEqual(stats["Attended"].october, 49)
         self.assertTrue(stats["Attended"].estimate)
         self.assertFalse(stats["RSVPs"].estimate)
 

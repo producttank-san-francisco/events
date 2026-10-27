@@ -31,6 +31,7 @@ from traffic_animation.github_traffic_animation import (  # noqa: E402
     WIDTH,
     AnimationError,
     Fonts,
+    load_font,
     load_fonts,
 )
 
@@ -48,6 +49,11 @@ PLOT_BOTTOM = 560
 LABEL_GAP = 22
 DASH = 9
 DASH_SPACE = 7
+# Percentage-change labels: a size below the 16 px names, faded past the muted name color.
+CHANGE_LABEL_STATS = ("RSVPs", "Guests with email")
+CHANGE_FONT_SIZE = 15
+CHANGE_FADE = 0.7
+CHANGE_CLEARANCE = 5
 
 
 class Stat(NamedTuple):
@@ -65,19 +71,28 @@ class Placed(NamedTuple):
     right_label_y: float
 
 
+class ChangeLabel(NamedTuple):
+    index: int
+    text: str
+    x: float
+    y: float
+
+
 class Layout(NamedTuple):
     x_left: float
     x_right: float
     placed: list[Placed]
+    changes: list[ChangeLabel]
+    change_font: Any
 
 
 def rsvps(event: dict[str, Any]) -> int:
     return event["named_guests"] + event["unnamed_plus_ones"]
 
 
-def turnout_rate(september: dict[str, Any]) -> float:
-    """September turnout as an unrounded ratio."""
-    return september["attended"] / rsvps(september)
+def email_turnout_rate(september: dict[str, Any]) -> float:
+    """September attendees per guest with email, as an unrounded ratio."""
+    return september["attended"] / september["guests_with_email"]
 
 
 def load_stats(path: Path) -> dict[str, Any]:
@@ -100,7 +115,7 @@ def load_stats(path: Path) -> dict[str, Any]:
 
 def build_stats(data: dict[str, Any]) -> list[Stat]:
     september, october = data["september"], data["october"]
-    estimate = round(rsvps(october) * turnout_rate(september))
+    estimate = round(october["guests_with_email"] * email_turnout_rate(september))
     return [
         Stat("RSVPs", rsvps(september), rsvps(october), False),
         Stat("Named guests", september["named_guests"], october["named_guests"], False),
@@ -185,6 +200,52 @@ def headline(stats: Sequence[Stat]) -> str:
     return f"October RSVPs are {'down' if change < 0 else 'up'} {abs(change)}% so far."
 
 
+def change_text(stat: Stat) -> str:
+    change = round((stat.october - stat.september) / stat.september * 100)
+    return f"{change:+d}%".replace("-", "−")
+
+
+def segment_hits_box(start: tuple[float, float], end: tuple[float, float], box: Sequence[float]) -> bool:
+    """True when any point of the segment falls inside the box; samples every pixel of length."""
+    steps = max(1, math.ceil(math.dist(start, end)))
+    for step in range(steps + 1):
+        x = start[0] + (end[0] - start[0]) * step / steps
+        y = start[1] + (end[1] - start[1]) * step / steps
+        if box[0] <= x <= box[2] and box[1] <= y <= box[3]:
+            return True
+    return False
+
+
+def place_change_labels(
+    stats: Sequence[Stat], segments: Sequence[tuple[tuple[float, float], tuple[float, float]]], font: Any, draw: ImageDraw.ImageDraw,
+) -> list[ChangeLabel]:
+    """Put each change label above its line's midpoint, moving out until it clears every line."""
+    scale = RENDER_SCALE
+    clearance = CHANGE_CLEARANCE * scale
+    labels = []
+    for index, stat in enumerate(stats):
+        if stat.name not in CHANGE_LABEL_STATS:
+            continue
+        text = change_text(stat)
+        (x0, y0), (x1, y1) = segments[index]
+        length = math.dist((x0, y0), (x1, y1))
+        # Unit normal on the upper side of the line.
+        normal_x, normal_y = (y1 - y0) / length, -(x1 - x0) / length
+        if normal_y > 0:
+            normal_x, normal_y = -normal_x, -normal_y
+        middle_x, middle_y = (x0 + x1) / 2, (y0 + y1) / 2
+        for offset in range(0, 200 * scale, scale):
+            x, y = middle_x + normal_x * offset, middle_y + normal_y * offset
+            left, top, right, bottom = draw.textbbox((x, y), text, font=font, anchor="mm")
+            box = (left - clearance, top - clearance, right + clearance, bottom + clearance)
+            if not any(segment_hits_box(start, end, box) for start, end in segments):
+                labels.append(ChangeLabel(index, text, x, y))
+                break
+        else:
+            raise ValueError(f"No room for the {stat.name} change label")
+    return labels
+
+
 def plan_layout(stats: Sequence[Stat], fonts: Fonts, draw: ImageDraw.ImageDraw) -> Layout:
     scale = RENDER_SCALE
     left_width = max(
@@ -212,7 +273,10 @@ def plan_layout(stats: Sequence[Stat], fonts: Fonts, draw: ImageDraw.ImageDraw) 
     left_labels = spread_labels(left_y, LABEL_GAP * scale, *bounds)
     right_labels = spread_labels(right_y, LABEL_GAP * scale, *bounds)
     placed = [Placed(stat, left_y[i], right_y[i], left_labels[i], right_labels[i]) for i, stat in enumerate(stats)]
-    return Layout(x_left, x_right, placed)
+    segments = [((x_left, left_y[i]), (x_right, right_y[i])) for i in range(len(stats))]
+    change_font = load_font(CHANGE_FONT_SIZE)
+    changes = place_change_labels(stats, segments, change_font, draw)
+    return Layout(x_left, x_right, placed, changes, change_font)
 
 
 def draw_label(
@@ -291,17 +355,14 @@ def render_frame(data: dict[str, Any], stats: Sequence[Stat], layout: Layout, ov
                 value=right_value(stat), name=right_name(stat),
                 value_color=fade(TEXT, reveal), name_color=fade(MUTED, reveal), fonts=fonts,
             )
-            if stat.name in ("RSVPs", "Guests with email"):
-                change = round((stat.october - stat.september) / stat.september * 100)
+        for label in layout.changes:
+            if label.index == index:
                 draw.text(
-                    ((layout.x_left + layout.x_right) / 2, (item.left_y + item.right_y) / 2 - 16 * scale),
-                    f"{change:+d}%".replace("-", "−"),
-                    fill=fade(TEXT, reveal),
-                    font=fonts.label,
-                    anchor="mm",
+                    (label.x, label.y), label.text,
+                    fill=fade(MUTED, CHANGE_FADE * reveal), font=layout.change_font, anchor="mm",
                 )
 
-    rate = round(turnout_rate(september) * 100)
+    rate = round(email_turnout_rate(september) * 100)
     draw.text(
         (62 * scale, 625 * scale),
         "RSVPs = named guests + unnamed Meetup plus-ones. Aggregate counts only.",
@@ -310,7 +371,7 @@ def render_frame(data: dict[str, Any], stats: Sequence[Stat], layout: Layout, ov
     )
     draw.text(
         (62 * scale, 647 * scale),
-        f"October as of {format_as_of(october['as_of'])}; attended is an estimate at September’s {rate}% turnout.",
+        f"October as of {format_as_of(october['as_of'])}; attended estimated from September’s {rate}% email-guest turnout.",
         fill=MUTED,
         font=fonts.note,
     )
@@ -363,7 +424,7 @@ def render_slopegraph_gif(data: dict[str, Any]) -> bytes:
 def render_report(data: dict[str, Any], gif_name: str) -> str:
     stats = build_stats(data)
     september, october = data["september"], data["october"]
-    rate = round(turnout_rate(september) * 100)
+    rate = round(email_turnout_rate(september) * 100)
     rows = "\n".join(
         f"| {stat.name} | {stat.september:,} | {right_value(stat)}{' (estimate)' if stat.estimate else ''} |"
         for stat in stats
@@ -380,7 +441,7 @@ def render_report(data: dict[str, Any], gif_name: str) -> str:
 
 - RSVPs are named guests plus unnamed Meetup plus-ones.
 - September attended is the door head count.
-- October as of {format_as_of(october['as_of'])}; attended is an estimate at September’s {rate}% turnout.
+- October as of {format_as_of(october['as_of'])}; attended estimated from September’s {rate}% email-guest turnout.
 - Aggregate counts only. No guest names or emails are stored in this repository.
 
 To refresh, edit [`stats.json`](stats.json), then run `./src/rsvp-slopegraph/src/rsvp_slopegraph.py` from the repository root.
