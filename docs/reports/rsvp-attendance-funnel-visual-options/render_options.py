@@ -147,16 +147,16 @@ def option_a():
             if i == 0:
                 label(x-12, yy, f"{name} {value}", 20, color, "rm")
                 if stage:
-                    label(x-12, yy-24, "RSVPs", 17, MUTED, "rm")
+                    label(x, yy-30, "RSVPs", 17, MUTED)
             elif i == 1:
                 label(x, yy-26, str(value), 22, color)
                 if stage:
-                    label(x, yy-50, "Email", 17, MUTED)
+                    label(x, yy-56, "Email", 17, MUTED)
             else:
                 # Drop end labels slightly so they continue the downward slope.
                 label(x+12, yy+8, f"≈{round(value)}" if estimated else str(value), 22, color, "lm")
                 if stage:
-                    label(x+12, yy-16, "Attended", 17, MUTED, "lm")
+                    label(x, yy-30, "Attended", 17, MUTED)
                 if estimated:
                     label(x+12, yy+32, "assumed", 17, color, "lm")
     for row, (name, counts, color) in enumerate(series):
