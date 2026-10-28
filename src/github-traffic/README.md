@@ -8,7 +8,7 @@ Repository administrators can create a shareable 14-day GitHub traffic report:
 ./src/github-traffic/src/github_traffic_report.py --help
 ```
 
-The help lists the required repository, focus-page, and output options. The current [ProductTank traffic report](../../docs/reports/github-traffic/report.md) focuses on Jorge’s event page. Its [animated chart](../../docs/reports/github-traffic/traffic.gif) plots cumulative page views and Git clones by day.
+The help lists the required repository, focus-page, and output options. Output goes to `docs/reports/github-traffic/` by default: the report, animated chart, source data and invocation log. The `docs/` folder is not tracked in git, so these files exist only in your local checkout.
 
 The command requires an authenticated [GitHub CLI](https://cli.github.com/) account with repository administration access, [Pillow](https://pillow.readthedocs.io/), and the [Gifski CLI](https://gif.ski/). It writes the report, animation, exact API source data, and an invocation log. GitHub traffic shows page views and Git clones; it does not show clicks on outbound links.
 
@@ -38,7 +38,7 @@ To fetch current traffic and regenerate the report and GIF, run from the reposit
 
 Use this live refresh when the traffic data changes. The saved-snapshot command below does not check GitHub for newer activity, and the GIF does not update automatically.
 
-To rebuild from the saved GitHub data without API access, run from the repository root:
+To rebuild from saved GitHub data in your local checkout without API access, run from the repository root:
 
 ```bash
 ./src/github-traffic/src/github_traffic_report.py --from-snapshot docs/reports/github-traffic/source.json
