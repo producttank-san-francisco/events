@@ -91,7 +91,7 @@ class Canvas:
         stamp = local.strftime("%b %-d, %Y · %-I:%M:%S %p %Z")
         self.text(64, 937, f"October snapshot: {stamp} ({as_of.strftime('%H:%M:%S UTC')}). Not a live count.", 17, MUTED)
         self.text(64, 964, f"RSVPs: September {SEP['named_guests']} named + {SEP['unnamed_plus_ones']} plus-ones; October {OCT['named_guests']} + {OCT['unnamed_plus_ones']}.", 17, MUTED)
-        self.text(64, 991, "Later build notes report 133 named guests; this comparison deliberately retains the saved 132-row snapshot.", 17, MUTED)
+        self.text(64, 991, "October named guests count only rows still registered on the Vapi guest list.", 17, MUTED)
 
     def save(self, name, *, footer=True):
         if footer:
@@ -155,7 +155,8 @@ def option_a():
         boxes.append(box)
 
     label(40, 40, f"October is on pace for ≈{round(ESTIMATE)} attendees", 28, anchor="lm")
-    label(680, 40, "as of Oct. 27, 2026", 16, MUTED, "rm")
+    as_of = datetime.fromisoformat(OCT["as_of"].replace("Z", "+00:00")).astimezone(ZoneInfo("America/Los_Angeles"))
+    label(680, 40, as_of.strftime("as of %b. %-d, %Y"), 16, MUTED, "rm")
     for (start, end), text in zip(guides, ("RSVPs", "Email", "Attended")):
         label(start[0], axis_y, text, 17, MUTED)
     for row, (name, counts, color) in enumerate(series):
@@ -287,7 +288,7 @@ def option_b():
             x = left+p*(right-left)
             c.line((x, 594), (x, 604))
             c.text(x, 615, f"{p:.0%}", 17, MUTED, anchor="ma")
-    c.text(64, 671, f"136/237 vs. 80/144 · gap {float(GAP):.4f}… percentage points", 18, MUTED)
+    c.text(64, 671, f"{S_EMAIL}/{S_TOTAL} vs. {O_EMAIL}/{O_TOTAL} · gap {float(GAP):.4f}… percentage points", 18, MUTED)
     c.text(650, 671, "84/136 = 21/34 · same ratio assumed for October", 18, MUTED)
     c.save("option-b-step-ratio-small-multiples.png")
 
