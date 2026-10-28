@@ -1,12 +1,12 @@
 # RSVP slopegraph
 
-Compares the September and October events on four stats: RSVPs, named guests, guests with email and attendance. The [report](../../docs/reports/rsvp-slopegraph/report.md) shows the [animated slopegraph](../../docs/reports/rsvp-slopegraph/slopegraph.gif).
+Compares the September and October events on four stats: RSVPs, named guests, guests with email and attendance. The script writes a report and animated slopegraph to `docs/reports/rsvp-slopegraph/`. The `docs/` folder is not tracked in git, so these files exist only in your local checkout.
 
 The GIF reuses the [GitHub traffic animation](../github-traffic/README.md)'s colors, fonts, frame rate and Gifski encoding. It needs the same setup: `brew install gifski` and `python3 -m pip install Pillow`.
 
 ## Update the numbers
 
-All numbers live in [`docs/reports/rsvp-slopegraph/stats.json`](../../docs/reports/rsvp-slopegraph/stats.json). The file holds aggregate counts only; never add guest names or emails.
+All numbers live in `docs/reports/rsvp-slopegraph/stats.json`, which is local only. The file holds aggregate counts only; never add guest names or emails.
 
 1. Update the October values (`named_guests`, `guests_with_email`, `unnamed_plus_ones`) and set `as_of` to the guest list's timestamp in UTC.
 2. Run from the repository root:
