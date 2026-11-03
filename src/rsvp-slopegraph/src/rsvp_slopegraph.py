@@ -6,8 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import shutil
-import subprocess
 import sys
 import tempfile
 from datetime import datetime
@@ -22,7 +20,6 @@ sys.path.insert(0, str(REPO_ROOT / "src" / "github-traffic" / "src"))
 from traffic_animation.github_traffic_animation import (  # noqa: E402
     BACKGROUND,
     CLONES,
-    FPS,
     HEIGHT,
     MUTED,
     RENDER_SCALE,
@@ -31,6 +28,8 @@ from traffic_animation.github_traffic_animation import (  # noqa: E402
     WIDTH,
     AnimationError,
     Fonts,
+    encode_gif,
+    find_gifski,
     load_font,
     load_fonts,
 )
@@ -379,9 +378,7 @@ def render_frame(data: dict[str, Any], stats: Sequence[Stat], layout: Layout, ov
 
 
 def render_slopegraph_gif(data: dict[str, Any]) -> bytes:
-    encoder = shutil.which("gifski")
-    if encoder is None:
-        raise AnimationError("Cannot render slopegraph animation: install Gifski (brew install gifski on macOS)")
+    encoder = find_gifski("slopegraph animation")
     stats = build_stats(data)
     fonts = load_fonts()
     layout = plan_layout(stats, fonts, ImageDraw.Draw(Image.new("RGB", (1, 1))))
@@ -396,29 +393,16 @@ def render_slopegraph_gif(data: dict[str, Any]) -> bytes:
             frame.save(frame_path, compress_level=1)
             frame.close()
             frame_paths.append(str(frame_path))
-        # Repeated inputs give Gifski exact holds, as in the traffic animation.
-        inputs = frame_paths[:1] * OPENING_HOLD_FRAMES + frame_paths[1:-1] + frame_paths[-1:] * FINAL_HOLD_FRAMES
-        output_path = directory / "slopegraph.gif"
-        command = [
-            encoder, "--quiet", "--no-sort",
-            "--fps", str(FPS),
-            "--quality", "100",
-            "--motion-quality", "100",
-            "--lossy-quality", "100",
-            "--width", str(WIDTH),
-            "--height", str(HEIGHT),
-            "--repeat", "-1",
-            "--output", str(output_path),
-            *inputs,
-        ]
-        try:
-            result = subprocess.run(command, capture_output=True, text=True, check=False)
-        except OSError as error:
-            raise AnimationError(f"Cannot run Gifski: {error}") from error
-        if result.returncode != 0:
-            detail = result.stderr.strip() or result.stdout.strip() or "no error detail returned"
-            raise AnimationError(f"Gifski failed: {detail}")
-        return output_path.read_bytes()
+        return encode_gif(
+            encoder,
+            frame_paths,
+            directory / "slopegraph.gif",
+            width=WIDTH,
+            height=HEIGHT,
+            opening_hold=OPENING_HOLD_FRAMES,
+            final_hold=FINAL_HOLD_FRAMES,
+            repeat=-1,
+        )
 
 
 def render_report(data: dict[str, Any], gif_name: str) -> str:

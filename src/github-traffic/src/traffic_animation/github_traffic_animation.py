@@ -255,10 +255,52 @@ def render_frame(
     return image.resize((WIDTH, HEIGHT), Image.Resampling.LANCZOS)
 
 
-def render_traffic_gif(snapshot: dict[str, Any]) -> bytes:
+def find_gifski(animation: str) -> str:
+    """Return the Gifski path, or fail before any frames are drawn."""
     encoder = shutil.which("gifski")
     if encoder is None:
-        raise AnimationError("Cannot render traffic animation: install Gifski (brew install gifski on macOS)")
+        raise AnimationError(f"Cannot render {animation}: install Gifski (brew install gifski on macOS)")
+    return encoder
+
+
+def encode_gif(
+    encoder: str,
+    frame_paths: Sequence[str],
+    output_path: Path,
+    *,
+    width: int,
+    height: int,
+    opening_hold: int,
+    final_hold: int,
+    repeat: int,
+) -> bytes:
+    """Encode PNG frames at FPS; `repeat` is Gifski's loop count (0 = forever, -1 = play once)."""
+    # Repeated inputs give Gifski exact holds without re-quantizing its output.
+    inputs = list(frame_paths[:1]) * opening_hold + list(frame_paths[1:-1]) + list(frame_paths[-1:]) * final_hold
+    command = [
+        encoder, "--quiet", "--no-sort",
+        "--fps", str(FPS),
+        "--quality", "100",
+        "--motion-quality", "100",
+        "--lossy-quality", "100",
+        "--width", str(width),
+        "--height", str(height),
+        "--repeat", str(repeat),
+        "--output", str(output_path),
+        *inputs,
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+    except OSError as error:
+        raise AnimationError(f"Cannot run Gifski: {error}") from error
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "no error detail returned"
+        raise AnimationError(f"Gifski failed: {detail}")
+    return output_path.read_bytes()
+
+
+def render_traffic_gif(snapshot: dict[str, Any]) -> bytes:
+    encoder = find_gifski("traffic animation")
     dates, views, clones = series_from_snapshot(snapshot)
     if not dates:
         raise ValueError("Cannot render traffic animation without daily data")
@@ -284,30 +326,13 @@ def render_traffic_gif(snapshot: dict[str, Any]) -> bytes:
             frame.save(frame_path, compress_level=1)
             frame.close()
             frame_paths.append(str(frame_path))
-        # Repeated inputs give Gifski exact holds without re-quantizing its output.
-        inputs = (
-            frame_paths[:1] * OPENING_HOLD_FRAMES
-            + frame_paths[1:-1]
-            + frame_paths[-1:] * FINAL_HOLD_FRAMES
+        return encode_gif(
+            encoder,
+            frame_paths,
+            directory / "traffic.gif",
+            width=WIDTH,
+            height=HEIGHT,
+            opening_hold=OPENING_HOLD_FRAMES,
+            final_hold=FINAL_HOLD_FRAMES,
+            repeat=0,
         )
-        output_path = directory / "traffic.gif"
-        command = [
-            encoder, "--quiet", "--no-sort",
-            "--fps", str(FPS),
-            "--quality", "100",
-            "--motion-quality", "100",
-            "--lossy-quality", "100",
-            "--width", str(WIDTH),
-            "--height", str(HEIGHT),
-            "--repeat", "0",
-            "--output", str(output_path),
-            *inputs,
-        ]
-        try:
-            result = subprocess.run(command, capture_output=True, text=True, check=False)
-        except OSError as error:
-            raise AnimationError(f"Cannot run Gifski: {error}") from error
-        if result.returncode != 0:
-            detail = result.stderr.strip() or result.stdout.strip() or "no error detail returned"
-            raise AnimationError(f"Gifski failed: {detail}")
-        return output_path.read_bytes()
