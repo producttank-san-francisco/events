@@ -9,7 +9,7 @@ On the page:
 - Hover over a ribbon, or tab to it, to read its people and share. Hover over a bar to list its people by role.
 - Click a role (a top-row bar or a row in the role table), or press Enter or Space on it, to pin it: only that role keeps its color. Click it again, press Escape or click empty chart space to clear.
 - On a touch screen, a tap acts as hover; a second tap on a role pins it.
-- Click "How we count ⊕", or tab to it and press Space, to show the counting rules in the margin. Click it again to hide them. On a screen narrower than 760 px, they open below the line instead.
+- "How we count ⊕" sits in the margin to the right of the chart. Click it, or tab to it and press Space, to show the counting rules; click it again to hide them. On a screen narrower than 1,200 px, it sits above the chart instead.
 - On a screen narrower than 760 px, the chart scrolls sideways.
 
 ## Update the chart

@@ -102,6 +102,15 @@ label.margin-toggle.collapsible:has(+ input.margin-toggle.collapsible:focus-visi
 .marginnote.collapsible { display: none; }
 .margin-toggle.collapsible:checked + .marginnote.collapsible { display: block; }
 .marginnote .rule { display: block; margin-bottom: 0.5rem; }
+/* The chart keeps its full width when it fits; "How we count" takes the margin to its right. */
+.chart-row { display: grid; grid-template-columns: minmax(0, 1060px) minmax(16rem, 1fr); column-gap: 2.5rem; align-items: start; }
+.chart-row figure.funnel { grid-column: 1; grid-row: 1; }
+.how-we-count { grid-column: 2; grid-row: 1; max-width: 22rem; padding: 1.5rem 1.5rem 0 0; font-size: 1.1rem; line-height: 1.3; }
+.how-we-count .marginnote.collapsible { float: none; position: static; width: auto; margin: 0.5rem 0 0; }
+@media (max-width: 1200px) {
+    .chart-row { display: block; }
+    .how-we-count { max-width: 40rem; padding: 0; margin-bottom: 1.5rem; }
+}
 @media (prefers-reduced-motion: reduce) { .funnel .ribbon, .funnel .segment { transition: none; } }
 @media (max-width: 760px) {
     figure.funnel { max-width: 100%; overflow-x: auto; }
@@ -548,20 +557,18 @@ def render_page(data: dict[str, Any], event: str) -> str:
 <article>
 <h1>{html.escape(event)}</h1>
 <p class="subtitle">as of {html.escape(data["as_of"])}</p>
-<section>
-<figure class="funnel">
-<svg id="funnel-chart" viewBox="0 0 1060 1040" role="group" aria-label="{html.escape(label)}"></svg>
-<div id="funnel-tip" class="funnel-tip" role="tooltip" hidden></div>
-</figure>
-</section>
-<section>
-<p class="how-we-count">
+<section class="chart-row">
+<aside class="how-we-count">
 <label for="mn-how-we-count" class="margin-toggle collapsible">How we count &#8853;</label>
 <input type="checkbox" id="mn-how-we-count" class="margin-toggle collapsible" aria-label="Show or hide how we count"/>
 <span class="marginnote collapsible">
 {items}
 </span>
-</p>
+</aside>
+<figure class="funnel">
+<svg id="funnel-chart" viewBox="0 0 1060 1040" role="group" aria-label="{html.escape(label)}"></svg>
+<div id="funnel-tip" class="funnel-tip" role="tooltip" hidden></div>
+</figure>
 </section>
 </article>
 <script type="application/json" id="funnel-data">{embedded}</script>
