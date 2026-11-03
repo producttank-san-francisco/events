@@ -110,15 +110,19 @@ label.margin-toggle.collapsible:has(+ input.margin-toggle.collapsible:checked)::
 .how-we-count { grid-column: 2; grid-row: 1; max-width: 22rem; padding: 1.5rem 1.5rem 0 0; font-size: 1.1rem; line-height: 1.3; }
 .how-we-count > label { color: #666; }
 .how-we-count .marginnote.collapsible { float: none; position: static; width: auto; margin: 0.5rem 0 0; color: #666; font-size: 1rem; line-height: 1.4; }
+.how-we-count .marginnote b { color: #4d4d4d; }
 .how-we-count .chart-note { margin: 1rem 0 0; font-size: 1rem; line-height: 1.4; color: #666; }
-/* Clicking a chart footnote number flashes its note yellow so the eye finds it. */
-.how-we-count .chart-note:target { background-color: #fff3a0; box-shadow: 0 0 0 0.3rem #fff3a0; animation: note-flash 1.2s ease-out; }
-@keyframes note-flash { from { background-color: #ffe45c; box-shadow: 0 0 0 0.3rem #ffe45c; } }
+/* Clicking a chart footnote number lights its note yellow for 5 s, then fades it out over 10 s. */
+.how-we-count .chart-note:target { animation: note-flash 15s linear forwards; }
+@keyframes note-flash {
+    0%, 33.333% { background-color: #fff3a0; box-shadow: 0 0 0 0.3rem #fff3a0; }
+    100% { background-color: rgba(255, 243, 160, 0); box-shadow: 0 0 0 0.3rem rgba(255, 243, 160, 0); }
+}
 @media (max-width: 1200px) {
     .chart-row { display: block; }
     .how-we-count { max-width: 40rem; padding: 0; margin-bottom: 1.5rem; }
 }
-@media (prefers-reduced-motion: reduce) { .funnel .ribbon, .funnel .segment { transition: none; } .how-we-count .chart-note:target { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .funnel .ribbon, .funnel .segment { transition: none; } }
 @media (max-width: 760px) {
     figure.funnel { max-width: 100%; overflow-x: auto; }
     figure.funnel svg { min-width: 760px; }
