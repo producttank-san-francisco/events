@@ -513,7 +513,7 @@ def render_page(data: dict[str, Any], event: str) -> str:
         f"Sankey chart, {data['headline']}. {totals['invited']:,} invited and {totals['via_luma']:,} via Luma only, "
         "flowing from role to reply to host decision; ribbon width is people. "
         "Hover or tab to a ribbon or bar to read its people. Click a role, or press Enter on it, to pin it; "
-        "press Escape to clear."
+        "press Escape to clear. Click a ribbon, or press Enter on it, to trace it back to its role."
     )
     rules = (
         (

@@ -175,9 +175,21 @@
     return `${role.name}: ${invited}${number(role.rsvped)} RSVP’d, ${number(role.accepted)} accepted`;
   }
 
+  // A ribbon plus the ribbons of its role that lead to it from the top row.
+  function tracePath(link) {
+    const path = new Set([link]);
+    let up = link;
+    while (up.source.depth > 0) {
+      up = up.source.targetLinks.find((into) => into.role === link.role);
+      path.add(up);
+    }
+    return path;
+  }
+
   function render(graph, invited) {
     let hover = null; // { link } or { node }
     let pinned = null; // role name
+    let trace = null; // { link, path }: a clicked ribbon and tracePath(link)
     let pointer = "mouse";
 
     const header = svg.append("g");
@@ -211,10 +223,10 @@
       .attr("stroke", (link) => roles.get(link.role).color)
       .attr("stroke-width", 1)
       .attr("tabindex", 0)
-      .attr("role", "img")
+      .attr("role", "button")
       .attr("aria-label", (link) => {
         const { title, rows } = linkTip(link);
-        return `${title}: ${rows.join(", ")}`;
+        return `${title}: ${rows.join(", ")}. Press Enter to trace it back to its source.`;
       });
 
     const nodes = svg
@@ -233,8 +245,8 @@
       .selectAll("rect.segment")
       .data((node) =>
         node.depth === 0
-          ? [{ x0: node.y0, x1: node.y1, y: node.x0, role: node.name }]
-          : node.targetLinks.map((link) => ({ x0: link.y1 - link.width / 2, x1: link.y1 + link.width / 2, y: node.x0, role: link.role })),
+          ? [{ x0: node.y0, x1: node.y1, y: node.x0, role: node.name, node }]
+          : node.targetLinks.map((link) => ({ x0: link.y1 - link.width / 2, x1: link.y1 + link.width / 2, y: node.x0, role: link.role, node })),
       )
       .join("rect")
       .attr("class", "segment")
@@ -305,18 +317,29 @@
     [data.totals.invited, data.totals.rsvped, data.totals.accepted].forEach((value, i) => text(table, columns[i], y, number(value), 19, INK, "end"));
 
     function strength(link) {
+      if (trace) return trace.path.has(link) ? FULL : FADED;
       if (hover && hover.link) return link === hover.link ? FULL : FADED;
       if (hover && hover.node) return link.source === hover.node || link.target === hover.node ? STRENGTH[link.tier] : FADED;
       if (pinned) return link.role === pinned ? STRENGTH[link.tier] : FADED;
       return STRENGTH[link.tier];
     }
 
+    // A traced path keeps its role's color only on the bars it touches.
+    function segmentLit(segment) {
+      if (trace) return segment.role === trace.link.role && [...trace.path].some((link) => link.source === segment.node || link.target === segment.node);
+      return !pinned || segment.role === pinned;
+    }
+
     function refresh() {
-      ribbons.style("fill-opacity", (link) => strength(link).fill).style("stroke-opacity", (link) => strength(link).edge);
-      segments.style("opacity", (segment) => (!pinned || segment.role === pinned ? 1 : FADED.fill));
+      ribbons
+        .style("fill-opacity", (link) => strength(link).fill)
+        .style("stroke-opacity", (link) => strength(link).edge)
+        .attr("aria-pressed", (link) => String(Boolean(trace && trace.path.has(link))));
+      segments.style("opacity", (segment) => (segmentLit(segment) ? 1 : FADED.fill));
       nodes.filter((node) => node.depth === 0).attr("aria-pressed", (node) => String(node.name === pinned));
       tableRows.classed("pinned", (role) => role.name === pinned).attr("aria-pressed", (role) => String(role.name === pinned));
-      subline.text(pinned ? pinnedLine(roles.get(pinned)) : data.subline);
+      const role = trace ? trace.link.role : pinned;
+      subline.text(role ? pinnedLine(roles.get(role)) : data.subline);
     }
 
     function showTip(content, x, y) {
@@ -350,6 +373,13 @@
 
     function togglePin(name) {
       pinned = pinned === name ? null : name;
+      trace = null;
+      refresh();
+    }
+
+    function toggleTrace(link) {
+      trace = trace && trace.link === link ? null : { link, path: tracePath(link) };
+      pinned = null;
       refresh();
     }
 
@@ -371,37 +401,40 @@
     bindHover(nodes, (node) => ({ node }));
 
     const isHovered = (item) => hover && (item.link ? hover.link === item.link : hover.node === item.node);
-    // A tap acts as hover; on a role, a second tap pins it.
-    function tap(event, item, pinName) {
+    // A tap acts as hover; a second tap pins: a role on its top-row bar, a traced path on a ribbon.
+    function tap(event, item, pin) {
       event.stopPropagation();
       if (pointer === "touch" && !isHovered(item)) setHover(item, event.clientX, event.clientY);
-      else if (pinName) togglePin(pinName);
+      else if (pin) pin();
     }
-    ribbons.on("click", (event, link) => tap(event, { link }));
-    nodes.on("click", (event, node) => tap(event, { node }, node.depth === 0 ? node.name : null));
+    ribbons.on("click", (event, link) => tap(event, { link }, () => toggleTrace(link)));
+    nodes.on("click", (event, node) => tap(event, { node }, node.depth === 0 ? () => togglePin(node.name) : null));
     tableRows.on("click", (event, role) => {
       event.stopPropagation();
       togglePin(role.name);
     });
 
-    function pinKeys(selection, name) {
+    function pressKeys(selection, pin) {
       selection.on("keydown", (event, d) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
-        togglePin(name(d));
+        pin(d);
       });
     }
-    pinKeys(nodes.filter((node) => node.depth === 0), (node) => node.name);
-    pinKeys(tableRows, (role) => role.name);
+    pressKeys(nodes.filter((node) => node.depth === 0), (node) => togglePin(node.name));
+    pressKeys(tableRows, (role) => togglePin(role.name));
+    pressKeys(ribbons, toggleTrace);
 
     svg.on("pointerdown", (event) => (pointer = event.pointerType));
     svg.on("click", () => {
       pinned = null;
+      trace = null;
       clearHover();
     });
     d3.select(document).on("keydown.funnel", (event) => {
       if (event.key !== "Escape") return;
       pinned = null;
+      trace = null;
       clearHover();
     });
 
@@ -411,7 +444,7 @@
   const faces = document.fonts ? Promise.all(['20px "et-book"', 'bold 20px "et-book"'].map((face) => document.fonts.load(face))) : Promise.resolve();
   faces.then(draw, draw);
 
-  // A highlighted footnote note fades out over 2 s on a click, tap, key press or focus move elsewhere.
+  // A highlighted footnote note fades out over 1 s on a click, tap, key press or focus move elsewhere.
   // Hover does not dismiss it: the pointer crosses the chart to reach the margin.
   const targetNote = () => document.querySelector(".how-we-count .chart-note:target");
 
@@ -424,7 +457,7 @@
     note.style.boxShadow = look.boxShadow;
     note.style.animation = "none";
     void note.offsetWidth; // apply the frozen look, so the fade starts from it
-    note.style.transition = "background-color 2s linear, box-shadow 2s linear";
+    note.style.transition = "background-color 1s linear, box-shadow 1s linear";
     note.style.backgroundColor = "rgba(255, 243, 160, 0)";
     note.style.boxShadow = "0 0 0 0.3rem rgba(255, 243, 160, 0)";
     note.dataset.dismissed = "1";

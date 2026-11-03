@@ -8,9 +8,10 @@ On the page:
 
 - Hover over a ribbon, or tab to it, to read its people and share. Hover over a bar to list its people by role.
 - Click a role (a top-row bar or a row in the role table), or press Enter or Space on it, to pin it: only that role keeps its color. Click it again, press Escape or click empty chart space to clear.
-- On a touch screen, a tap acts as hover; a second tap on a role pins it.
+- Click a ribbon, or press Enter or Space on it, to trace it back to its role at the top: only that ribbon and the ribbons of its role that lead to it keep their color. Click it again, press Escape or click empty chart space to clear.
+- On a touch screen, a tap acts as hover; a second tap on a role pins it, and a second tap on a ribbon traces it.
 - "How we count ⊕" sits in the margin to the right of the chart. Click it, or tab to it and press Space, to show the counting rules; click it again to hide them. On a screen narrower than 1,200 px, it sits above the chart instead.
-- Numbered footnotes on the chart point to notes in the same margin, under "How we count": note 1 (after the headline) counts the RSVP matches, and note 2 (after "Invited") counts the people the chart leaves out. The notes stay visible when the rules are hidden. Click a number to jump to its note, which stays yellow for 5 seconds, then fades out over 10 seconds; click the note's number to jump back. Clicking, tapping or pressing a key anywhere else fades it out over 2 seconds; clicking the same number again restarts it.
+- Numbered footnotes on the chart point to notes in the same margin, under "How we count": note 1 (after the headline) counts the RSVP matches, and note 2 (after "Invited") counts the people the chart leaves out. The notes stay visible when the rules are hidden. Click a number to jump to its note, which stays yellow for 5 seconds, then fades out over 10 seconds; click the note's number to jump back. Clicking, tapping or pressing a key anywhere else fades it out over 1 second; clicking the same number again restarts it.
 - On a screen narrower than 760 px, the chart scrolls sideways.
 
 ## Update the chart
