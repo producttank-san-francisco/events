@@ -410,4 +410,42 @@
 
   const faces = document.fonts ? Promise.all(['20px "et-book"', 'bold 20px "et-book"'].map((face) => document.fonts.load(face))) : Promise.resolve();
   faces.then(draw, draw);
+
+  // A highlighted footnote note fades out over 2 s on a click, tap, key press or focus move elsewhere.
+  // Hover does not dismiss it: the pointer crosses the chart to reach the margin.
+  const targetNote = () => document.querySelector(".how-we-count .chart-note:target");
+
+  function dismissNote(event) {
+    const note = targetNote();
+    // A footnote number starts a highlight; it does not dismiss one.
+    if (!note || note.dataset.dismissed || event.target.closest('a[href^="#note-"]')) return;
+    const look = getComputedStyle(note);
+    note.style.backgroundColor = look.backgroundColor;
+    note.style.boxShadow = look.boxShadow;
+    note.style.animation = "none";
+    void note.offsetWidth; // apply the frozen look, so the fade starts from it
+    note.style.transition = "background-color 2s linear, box-shadow 2s linear";
+    note.style.backgroundColor = "rgba(255, 243, 160, 0)";
+    note.style.boxShadow = "0 0 0 0.3rem rgba(255, 243, 160, 0)";
+    note.dataset.dismissed = "1";
+  }
+
+  function restartNote(note) {
+    if (!note) return;
+    note.style.backgroundColor = "";
+    note.style.boxShadow = "";
+    note.style.transition = "";
+    delete note.dataset.dismissed;
+    note.style.animation = "none";
+    void note.offsetWidth; // restart the CSS highlight from 0
+    note.style.animation = "";
+  }
+
+  ["pointerdown", "keydown", "focusin"].forEach((type) => document.addEventListener(type, dismissNote, true));
+  window.addEventListener("hashchange", () => restartNote(targetNote()));
+  // The same number again does not change the hash, so restart its note here.
+  document.addEventListener("click", (event) => {
+    const ref = event.target.closest('a[href^="#note-"]');
+    if (ref && ref.getAttribute("href") === location.hash) restartNote(targetNote());
+  });
 })();
