@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from collections import Counter
 from contextlib import redirect_stderr, redirect_stdout
+from itertools import groupby
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -263,6 +264,28 @@ class FlowTest(unittest.TestCase):
         for link in links:
             with self.subTest(link=(link["source"], link["target"], link["role"])):
                 self.assertEqual(link["tier"], expected[link["target"]])
+
+    def test_bands_leave_rsvpd_in_the_role_order_they_enter(self):
+        # d3-sankey keeps link order, so decision-first bands would leave RSVP’d under another role's segment.
+        rows = [
+            HEADER,
+            person("Person 1", "person1@example.com", "Volunteer", rsvp="TRUE", accept="TRUE"),
+            person("Person 2", "person2@example.com", "Volunteer", rsvp="TRUE"),
+            person("Person 3", "person3@example.com", "Speaker", rsvp="TRUE", accept="TRUE"),
+            person("Person 4", "person4@example.com", "Speaker", rsvp="TRUE"),
+        ]
+        luma = [
+            LUMA_HEADER,
+            guest("Person 1", "person1@example.com", "approved"),
+            guest("Person 2", "person2@example.com", "declined"),
+            guest("Person 3", "person3@example.com", "approved"),
+            guest("Person 4", "person4@example.com", "pending_approval"),
+        ]
+        links = chart(rows, luma)["links"]
+        into = [link["role"] for link in links if link["target"] == "RSVP’d"]
+        out = [role for role, _ in groupby(link["role"] for link in links if link["source"] == "RSVP’d")]
+        self.assertEqual(into, ["Volunteers", "Speakers"])
+        self.assertEqual(out, into)
 
     def test_shares_round_half_up(self):
         # 5 / 200 = 2.5% and 1 / 8 = 12.5%: Python's round() would give 2% and 12%.

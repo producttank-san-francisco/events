@@ -388,7 +388,8 @@ def funnel_data(outreach: Outreach, matching: Matching, as_of: str) -> dict[str,
     nodes += [{"name": reply, "stage": 1, "lines": lines[reply]} for reply in REPLIES if reply_totals[reply]]
     nodes += [{"name": decision, "stage": 2, "lines": lines[decision]} for decision in DECISIONS if decision_totals[decision]]
 
-    # Role by role into the replies, then decision by decision out of RSVP'd: d3-sankey keeps this order.
+    # Role by role into the replies and out of RSVP'd, so each role's bands leave RSVP'd from under its own
+    # segment of the box: d3-sankey keeps this order.
     links = [
         {"source": role.name, "target": reply, "role": role.name, "value": replies[role.name, reply],
          "tier": TIERS[reply], "share": percent(replies[role.name, reply], sizes[role.name])}
@@ -397,7 +398,7 @@ def funnel_data(outreach: Outreach, matching: Matching, as_of: str) -> dict[str,
     links += [
         {"source": RSVPD, "target": decision, "role": role.name, "value": decisions[role.name, decision],
          "tier": TIERS[decision], "share": percent(decisions[role.name, decision], replies[role.name, RSVPD])}
-        for decision in DECISIONS for role in roles if decisions[role.name, decision]
+        for role in roles for decision in DECISIONS if decisions[role.name, decision]
     ]
     mismatches = len(disagreements(outreach.invitees, matching))
     accepted = decision_totals[ACCEPTED]
