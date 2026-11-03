@@ -181,7 +181,9 @@
     let pointer = "mouse";
 
     const header = svg.append("g");
-    text(header, 40, 62, data.headline, 36, INK);
+    const headline = text(header, 40, 62, data.headline, 36, INK);
+    const headlineBox = headline.node().getBBox();
+    text(header.append("a").attr("href", "#note-1").attr("id", "note-ref-1").attr("aria-label", "Footnote 1: RSVP matches"), headlineBox.x + headlineBox.width + 5, 46, "1", 16, GRAY);
     const subline = text(header, 42, 100, data.subline, 19, GRAY);
     rule(header, 40, 1020, 118, GRAY);
 
@@ -190,7 +192,11 @@
       const x1 = invited[invited.length - 1].y1;
       const bracket = svg.append("g").attr("stroke", INK).attr("stroke-width", 1.4).attr("fill", "none");
       bracket.append("path").attr("d", `M${x0},184V174H${x1}V184`);
-      text(svg, (x0 + x1) / 2, 160, `Invited ${number(data.totals.invited)}`, 30, INK, "middle");
+      const invitedLabel = text(svg, (x0 + x1) / 2, 160, `Invited ${number(data.totals.invited)}`, 30, INK, "middle");
+      if (data.notes.length > 1) {
+        const invitedBox = invitedLabel.node().getBBox();
+        text(svg.append("a").attr("href", "#note-2").attr("id", "note-ref-2").attr("aria-label", "Footnote 2: people not shown"), invitedBox.x + invitedBox.width + 5, 146, "2", 16, GRAY);
+      }
     }
 
     const links = graph.links.slice().sort((a, b) => DRAW_ORDER[a.tier] - DRAW_ORDER[b.tier]);
@@ -297,10 +303,6 @@
     y += 28;
     text(table, left, y, "Total", 19, INK);
     [data.totals.invited, data.totals.rsvped, data.totals.accepted].forEach((value, i) => text(table, columns[i], y, number(value), 19, INK, "end"));
-
-    const notes = svg.append("g");
-    rule(notes, 40, 1020, 930, GRAY);
-    data.notes.forEach((note, i) => text(notes, 40, 958 + 26 * i, note, 17, GRAY));
 
     function strength(link) {
       if (hover && hover.link) return link === hover.link ? FULL : FADED;

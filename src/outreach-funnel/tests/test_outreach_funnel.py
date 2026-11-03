@@ -229,7 +229,7 @@ class LumaTest(unittest.TestCase):
 
         agreeing = chart(SHEET, LUMA)
         self.assertEqual(agreeing["mismatches"], 0)
-        self.assertIn("all 3 invitee RSVPs agree with the sheet", agreeing["notes"][0])
+        self.assertIn("All 3 agreed with the outreach sheet", agreeing["notes"][0])
 
 
 class FlowTest(unittest.TestCase):

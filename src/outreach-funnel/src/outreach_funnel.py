@@ -99,6 +99,8 @@ figure.funnel svg { display: block; width: 100%; height: auto; }
 label.margin-toggle.collapsible { display: inline; cursor: pointer; }
 input.margin-toggle.collapsible { display: inline-block; position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
 label.margin-toggle.collapsible:has(+ input.margin-toggle.collapsible:focus-visible) { outline: 1px solid #262421; outline-offset: 2px; }
+label.margin-toggle.collapsible::after { content: " ⊕"; }
+label.margin-toggle.collapsible:has(+ input.margin-toggle.collapsible:checked)::after { content: " ⊖"; }
 .marginnote.collapsible { display: none; }
 .margin-toggle.collapsible:checked + .marginnote.collapsible { display: block; }
 .marginnote .rule { display: block; margin-bottom: 0.5rem; }
@@ -106,12 +108,17 @@ label.margin-toggle.collapsible:has(+ input.margin-toggle.collapsible:focus-visi
 .chart-row { display: grid; grid-template-columns: minmax(0, 1060px) minmax(16rem, 1fr); column-gap: 2.5rem; align-items: start; }
 .chart-row figure.funnel { grid-column: 1; grid-row: 1; }
 .how-we-count { grid-column: 2; grid-row: 1; max-width: 22rem; padding: 1.5rem 1.5rem 0 0; font-size: 1.1rem; line-height: 1.3; }
-.how-we-count .marginnote.collapsible { float: none; position: static; width: auto; margin: 0.5rem 0 0; }
+.how-we-count > label { color: #666; }
+.how-we-count .marginnote.collapsible { float: none; position: static; width: auto; margin: 0.5rem 0 0; color: #666; font-size: 1rem; line-height: 1.4; }
+.how-we-count .chart-note { margin: 1rem 0 0; font-size: 1rem; line-height: 1.4; color: #666; }
+/* Clicking a chart footnote number flashes its note yellow so the eye finds it. */
+.how-we-count .chart-note:target { background-color: #fff3a0; box-shadow: 0 0 0 0.3rem #fff3a0; animation: note-flash 1.2s ease-out; }
+@keyframes note-flash { from { background-color: #ffe45c; box-shadow: 0 0 0 0.3rem #ffe45c; } }
 @media (max-width: 1200px) {
     .chart-row { display: block; }
     .how-we-count { max-width: 40rem; padding: 0; margin-bottom: 1.5rem; }
 }
-@media (prefers-reduced-motion: reduce) { .funnel .ribbon, .funnel .segment { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .funnel .ribbon, .funnel .segment { transition: none; } .how-we-count .chart-note:target { animation: none; } }
 @media (max-width: 760px) {
     figure.funnel { max-width: 100%; overflow-x: auto; }
     figure.funnel svg { min-width: 760px; }
@@ -352,27 +359,30 @@ def ink(color: str) -> str:
     return "#" + "".join(f"{channel:02x}" for channel in mixed)
 
 
-def footnotes(invited: int, matching: Matching, mismatches: int, bounced: int, not_contacted: int) -> list[str]:
+def footnotes(matching: Matching, mismatches: int, bounced: int, not_contacted: int) -> list[str]:
+    """The margin notes the chart's footnote numbers point to: RSVP matches, then what the chart leaves out."""
     matched = len(matching.guests)
-    if mismatches:
-        verdict = f"{plural(mismatches, 'sheet row')} {'disagrees' if mismatches == 1 else 'disagree'} with Luma; the chart uses Luma."
-    elif matched == 1:
-        verdict = "the 1 invitee RSVP agrees with the sheet."
-    elif matched:
-        verdict = f"all {matched:,} invitee RSVPs agree with the sheet."
+    if matched:
+        rsvps = (
+            f"Of the {plural(matched, 'invited guest')} who RSVP’d, {matching.by_email:,} matched by email and "
+            f"{len(matching.by_name):,} by name."
+        )
     else:
-        verdict = "no invitee has RSVP’d, and the sheet agrees."
+        rsvps = "No invited guest has RSVP’d yet."
+    if mismatches:
+        verdict = f" {plural(mismatches, 'sheet row')} {'disagrees' if mismatches == 1 else 'disagree'} with Luma; the chart uses Luma."
+    elif matched == 1:
+        verdict = " It agreed with the outreach sheet."
+    elif matched:
+        verdict = f" All {matched:,} agreed with the outreach sheet."
+    else:
+        verdict = ""
     skipped = [part for count, part in (
         (bounced, plural(bounced, "bounced email")),
         (not_contacted, f"{plural(not_contacted, 'person', 'people')} not yet contacted"),
     ) if count]
-    roles = "Role = first Label in the sheet; all sponsor labels count as Sponsors."
-    return [
-        f"Luma guest export matched to the outreach sheet by email ({matching.by_email:,}), "
-        f"then by name ({len(matching.by_name):,}): {verdict}",
-        f"{roles} Not drawn: {', '.join(skipped)}." if skipped else roles,
-        f"Hosts approve RSVPs on Luma. Of {plural(invited, 'invitee')}, {matched:,} RSVP’d.",
-    ]
+    notes = [rsvps + verdict]
+    return notes + [f"Not shown: {' and '.join(skipped)}."] if skipped else notes
 
 
 def funnel_data(outreach: Outreach, matching: Matching, as_of: str) -> dict[str, Any]:
@@ -421,7 +431,7 @@ def funnel_data(outreach: Outreach, matching: Matching, as_of: str) -> dict[str,
     return {
         "headline": f"RSVPs by role: {rsvped:,} on Luma, {accepted:,} accepted",
         "subline": f"width = people · color = role · as of {as_of}",
-        "notes": footnotes(invited, matching, mismatches, outreach.bounced, outreach.not_contacted),
+        "notes": footnotes(matching, mismatches, outreach.bounced, outreach.not_contacted),
         "roles": [
             {"name": role.name, "color": role.color, "ink": ink(role.color), "noun": role.noun,
              "invited": None if role.name == VIA_LUMA else sizes[role.name], "total": sizes[role.name],
@@ -505,7 +515,7 @@ def render_page(data: dict[str, Any], event: str) -> str:
         (
             "Invited = contacted.",
             f"Their {EMAIL_SENT} cell on the outreach sheet is filled in and does not say Bounced. Bounced emails "
-            "and people not yet contacted (blank cell) are left out; the note under the chart counts them. "
+            "and people not yet contacted (blank cell) are left out; the margin counts them. "
             "Empty rows are skipped.",
         ),
         (
@@ -541,6 +551,11 @@ def render_page(data: dict[str, Any], event: str) -> str:
     items = "\n".join(
         f'<span class="rule"><b>{html.escape(lead)}</b> {html.escape(detail)}</span>' for lead, detail in rules
     )
+    notes = "".join(
+        f'\n<div class="chart-note" id="note-{i}"><a href="#note-ref-{i}" aria-label="Back to chart footnote {i}">'
+        f"{i}.</a> {html.escape(note)}</div>"
+        for i, note in enumerate(data["notes"], 1)
+    )
     embedded = json.dumps(data, ensure_ascii=False).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
     title = html.escape(f"{event}: outreach funnel")
     return f"""<!DOCTYPE html>
@@ -559,14 +574,14 @@ def render_page(data: dict[str, Any], event: str) -> str:
 <p class="subtitle">as of {html.escape(data["as_of"])}</p>
 <section class="chart-row">
 <aside class="how-we-count">
-<label for="mn-how-we-count" class="margin-toggle collapsible">How we count &#8853;</label>
+<label for="mn-how-we-count" class="margin-toggle collapsible">How we count</label>
 <input type="checkbox" id="mn-how-we-count" class="margin-toggle collapsible" aria-label="Show or hide how we count"/>
 <span class="marginnote collapsible">
 {items}
-</span>
+</span>{notes}
 </aside>
 <figure class="funnel">
-<svg id="funnel-chart" viewBox="0 0 1060 1040" role="group" aria-label="{html.escape(label)}"></svg>
+<svg id="funnel-chart" viewBox="0 0 1060 920" role="group" aria-label="{html.escape(label)}"></svg>
 <div id="funnel-tip" class="funnel-tip" role="tooltip" hidden></div>
 </figure>
 </section>

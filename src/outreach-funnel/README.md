@@ -10,6 +10,7 @@ On the page:
 - Click a role (a top-row bar or a row in the role table), or press Enter or Space on it, to pin it: only that role keeps its color. Click it again, press Escape or click empty chart space to clear.
 - On a touch screen, a tap acts as hover; a second tap on a role pins it.
 - "How we count ⊕" sits in the margin to the right of the chart. Click it, or tab to it and press Space, to show the counting rules; click it again to hide them. On a screen narrower than 1,200 px, it sits above the chart instead.
+- Numbered footnotes on the chart point to notes in the same margin, under "How we count": note 1 (after the headline) counts the RSVP matches, and note 2 (after "Invited") counts the people the chart leaves out. The notes stay visible when the rules are hidden. Click a number to jump to its note, which turns yellow; click the note's number to jump back.
 - On a screen narrower than 760 px, the chart scrolls sideways.
 
 ## Update the chart
@@ -38,13 +39,13 @@ After a run, the terminal lists each invitee matched to a Luma guest by name ("M
 
 ## How it counts
 
-1. **Invited:** `Email Sent` holds any text except `Bounced`. Bounced emails and people not yet contacted (`Email Sent` blank) are not drawn; the footnote counts them. Fully blank rows are skipped.
+1. **Invited:** `Email Sent` holds any text except `Bounced`. Bounced emails and people not yet contacted (`Email Sent` blank) are not drawn; margin note 2 counts them. Fully blank rows are skipped.
 2. **Role:** the first entry of the `Label` cell (entries are split on `;`). An entry that starts with `Speaker` is Speakers; one that starts with `Volunteer` is Volunteers; any entry with `Sponsor` in it (any case, for example `Sponsor champion` or `Alum/Sponsor`) is Sponsors; `Judge` or `Community Partner` is Judges & partners. An invited row with any other first label, or a blank one, is an error.
 3. **Matching:** each invitee is matched to at most one Luma guest. First every invitee is matched by email (trimmed, any case). Then invitees still unmatched are matched by name against the guests still unused: the first and last words of both names must be equal, ignoring case, punctuation and middle names. If two unused guests match one invitee by name, the run stops with an error; add that guest's Luma email to the sheet.
 4. **Host decision:** Luma's `approval_status` decides it. `approved` is Accepted, `pending_approval` is Waiting for host and `declined` is Host declined. Any other status is an error.
 5. **Reply:** an invitee with a Luma match RSVP’d; Luma is the record. An invitee with no match declined if `Invite Declined` is checked; otherwise there is no reply yet.
 6. **Via Luma only:** Luma guests that match no invitee were not invited. They are their own role and are placed by their Luma status in the same way.
-7. **Cross-check:** each invitee's `Luma RSVP` checkbox is compared with "has a Luma match" and `Luma Accept` with "Luma status is approved". The footnote says whether they all agree; where they disagree, the chart uses Luma.
+7. **Cross-check:** each invitee's `Luma RSVP` checkbox is compared with "has a Luma match" and `Luma Accept` with "Luma status is approved". Margin note 1 says whether they all agree; where they disagree, the chart uses Luma.
 
 Checkbox cells read `TRUE` as checked and blank or `FALSE` as not checked; any other value is an error. These sheet rows are also errors: `Luma Accept` checked without `Luma RSVP`; `Invite Declined` or `Luma RSVP` checked for someone not invited; both `Invite Declined` and `Luma RSVP` checked. A sheet with nobody invited is an error. Shares are whole percents of the exact fraction, with halves rounded up. The page's "How we count" margin note states these rules too.
 
