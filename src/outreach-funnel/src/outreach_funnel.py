@@ -493,22 +493,45 @@ def render_page(data: dict[str, Any], event: str) -> str:
         "press Escape to clear."
     )
     rules = (
-        f"Invited: the {EMAIL_SENT} cell holds any text except Bounced. Bounced emails and people not yet contacted "
-        f"({EMAIL_SENT} is blank) are not drawn; the footnote counts them. Blank rows are skipped.",
-        f"Role: the first entry in the {LABEL} cell. Speaker means Speakers, Volunteer means Volunteers, any label "
-        "with Sponsor in it means Sponsors, and Judge or Community Partner means Judges & partners.",
-        "Each invitee is matched to a Luma guest by email first, then by first and last name. "
-        "A guest matches one invitee at most.",
-        "A matched invitee RSVP’d. Luma says what the host decided: approved is Accepted, pending approval is "
-        "Waiting for host and declined is Host declined.",
-        f"An invitee with no Luma match declined if {INVITE_DECLINED} is checked; otherwise there is no reply yet.",
-        "Luma guests who match no invitee were not invited: they are “Via Luma only” and are placed by their "
-        "Luma status in the same way.",
-        f"The sheet’s {LUMA_RSVP} and {LUMA_ACCEPT} checkboxes are compared with Luma. Where they disagree, "
-        "the chart uses Luma.",
-        "Shares are whole percents; halves round up.",
+        (
+            "Invited = contacted.",
+            f"Their {EMAIL_SENT} cell on the outreach sheet is filled in and does not say Bounced. Bounced emails "
+            "and people not yet contacted (blank cell) are left out; the note under the chart counts them. "
+            "Empty rows are skipped.",
+        ),
+        (
+            "Role comes from the first label.",
+            f"Only the first entry in the {LABEL} cell counts. Speaker → Speakers; Volunteer → Volunteers; "
+            "any label with Sponsor in it → Sponsors; Judge or Community Partner → Judges & partners.",
+        ),
+        (
+            "Matched by email, then by name.",
+            "Each invitee on the sheet is looked up on Luma, the event’s RSVP site. If no email matches, the first "
+            "and last names must both match. Each Luma guest counts for one invitee at most.",
+        ),
+        (
+            "Found on Luma = RSVP’d.",
+            "The host’s choice on Luma sets the bottom row: approved is Accepted, pending approval is Waiting for "
+            "host, declined is Host declined.",
+        ),
+        (
+            "Not on Luma = declined or no reply.",
+            f"Declined if {INVITE_DECLINED} is checked on the sheet; otherwise No reply yet.",
+        ),
+        (
+            "On Luma but not on the sheet = Via Luma only.",
+            "These people signed up without an invite. The host’s choice places them the same way.",
+        ),
+        (
+            "Luma wins if the sheet disagrees.",
+            f"The sheet’s {LUMA_RSVP} and {LUMA_ACCEPT} checkboxes are checked against Luma; the chart always "
+            "uses Luma.",
+        ),
+        ("Percentages are whole numbers.", "Halves round up: 34.5% shows as 35%."),
     )
-    items = "\n".join(f'<span class="rule">{html.escape(rule)}</span>' for rule in rules)
+    items = "\n".join(
+        f'<span class="rule"><b>{html.escape(lead)}</b> {html.escape(detail)}</span>' for lead, detail in rules
+    )
     embedded = json.dumps(data, ensure_ascii=False).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
     title = html.escape(f"{event}: outreach funnel")
     return f"""<!DOCTYPE html>
