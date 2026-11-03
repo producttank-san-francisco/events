@@ -95,6 +95,13 @@ figure.funnel svg { display: block; width: 100%; height: auto; }
 .funnel-tip { position: fixed; z-index: 10; pointer-events: none; max-width: 22rem; padding: 0.5rem 0.75rem; background: #fffff8; border: 1px solid #262421; font-size: 1.2rem; line-height: 1.5; }
 .funnel-tip[hidden] { display: none; }
 .funnel-tip b { font-weight: bold; }
+/* Stock Tufte shows margin notes on wide screens; a .collapsible note starts hidden and toggles at every width. */
+label.margin-toggle.collapsible { display: inline; cursor: pointer; }
+input.margin-toggle.collapsible { display: inline-block; position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+label.margin-toggle.collapsible:has(+ input.margin-toggle.collapsible:focus-visible) { outline: 1px solid #262421; outline-offset: 2px; }
+.marginnote.collapsible { display: none; }
+.margin-toggle.collapsible:checked + .marginnote.collapsible { display: block; }
+.marginnote .rule { display: block; margin-bottom: 0.5rem; }
 @media (prefers-reduced-motion: reduce) { .funnel .ribbon, .funnel .segment { transition: none; } }
 @media (max-width: 760px) {
     figure.funnel { max-width: 100%; overflow-x: auto; }
@@ -501,7 +508,7 @@ def render_page(data: dict[str, Any], event: str) -> str:
         "the chart uses Luma.",
         "Shares are whole percents; halves round up.",
     )
-    items = "\n".join(f"<li>{html.escape(rule)}</li>" for rule in rules)
+    items = "\n".join(f'<span class="rule">{html.escape(rule)}</span>' for rule in rules)
     embedded = json.dumps(data, ensure_ascii=False).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
     title = html.escape(f"{event}: outreach funnel")
     return f"""<!DOCTYPE html>
@@ -525,10 +532,13 @@ def render_page(data: dict[str, Any], event: str) -> str:
 </figure>
 </section>
 <section>
-<h2>How we count</h2>
-<ul>
+<p class="how-we-count">
+<label for="mn-how-we-count" class="margin-toggle collapsible">How we count &#8853;</label>
+<input type="checkbox" id="mn-how-we-count" class="margin-toggle collapsible" aria-label="Show or hide how we count"/>
+<span class="marginnote collapsible">
 {items}
-</ul>
+</span>
+</p>
 </section>
 </article>
 <script type="application/json" id="funnel-data">{embedded}</script>

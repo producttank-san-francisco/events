@@ -9,6 +9,7 @@ On the page:
 - Hover over a ribbon, or tab to it, to read its people and share. Hover over a bar to list its people by role.
 - Click a role (a top-row bar or a row in the role table), or press Enter or Space on it, to pin it: only that role keeps its color. Click it again, press Escape or click empty chart space to clear.
 - On a touch screen, a tap acts as hover; a second tap on a role pins it.
+- Click "How we count ⊕", or tab to it and press Space, to show the counting rules in the margin. Click it again to hide them. On a screen narrower than 760 px, they open below the line instead.
 - On a screen narrower than 760 px, the chart scrolls sideways.
 
 ## Update the chart
@@ -45,7 +46,7 @@ After a run, the terminal lists each invitee matched to a Luma guest by name ("M
 6. **Via Luma only:** Luma guests that match no invitee were not invited. They are their own role and are placed by their Luma status in the same way.
 7. **Cross-check:** each invitee's `Luma RSVP` checkbox is compared with "has a Luma match" and `Luma Accept` with "Luma status is approved". The footnote says whether they all agree; where they disagree, the chart uses Luma.
 
-Checkbox cells read `TRUE` as checked and blank or `FALSE` as not checked; any other value is an error. These sheet rows are also errors: `Luma Accept` checked without `Luma RSVP`; `Invite Declined` or `Luma RSVP` checked for someone not invited; both `Invite Declined` and `Luma RSVP` checked. A sheet with nobody invited is an error. Shares are whole percents of the exact fraction, with halves rounded up. The page's "How we count" list states these rules too.
+Checkbox cells read `TRUE` as checked and blank or `FALSE` as not checked; any other value is an error. These sheet rows are also errors: `Luma Accept` checked without `Luma RSVP`; `Invite Declined` or `Luma RSVP` checked for someone not invited; both `Invite Declined` and `Luma RSVP` checked. A sheet with nobody invited is an error. Shares are whole percents of the exact fraction, with halves rounded up. The page's "How we count" margin note states these rules too.
 
 ## Files
 
