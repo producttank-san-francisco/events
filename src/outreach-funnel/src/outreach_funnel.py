@@ -41,9 +41,10 @@ EMAIL = "Email"
 LABEL = "Label"
 EMAIL_SENT = "Email Sent"
 INVITE_DECLINED = "Invite Declined"
+INVITE_MAYBE = "Invite Maybe"
 LUMA_RSVP = "Luma RSVP"
 LUMA_ACCEPT = "Luma Accept"
-REQUIRED_COLUMNS = (NAME, EMAIL, LABEL, EMAIL_SENT, INVITE_DECLINED, LUMA_RSVP, LUMA_ACCEPT)
+REQUIRED_COLUMNS = (NAME, EMAIL, LABEL, EMAIL_SENT, INVITE_DECLINED, INVITE_MAYBE, LUMA_RSVP, LUMA_ACCEPT)
 LUMA_COLUMNS = ("name", "email", "approval_status")
 
 VIA_LUMA = "Via Luma only"
@@ -52,15 +53,19 @@ SPEAKERS = "Speakers"
 SPONSORS = "Sponsors"
 JUDGES = "Judges & partners"
 RSVPD = "RSVP’d"
+MAYBE = "Maybe"
 DECLINED = "Declined"
 NO_REPLY = "No reply yet"
 ACCEPTED = "Accepted"
 WAITING = "Waiting for host"
 HOST_DECLINED = "Host declined"
-REPLIES = (RSVPD, DECLINED, NO_REPLY)
+REPLIES = (RSVPD, MAYBE, DECLINED, NO_REPLY)
 DECISIONS = (ACCEPTED, WAITING, HOST_DECLINED)
 # A ribbon's strength follows where it ends: active RSVPs stand out, the rest stay light.
-TIERS = {RSVPD: "strong", ACCEPTED: "strong", WAITING: "mid", DECLINED: "faint", NO_REPLY: "faint", HOST_DECLINED: "faint"}
+TIERS = {
+    RSVPD: "strong", ACCEPTED: "strong", MAYBE: "mid", WAITING: "mid", DECLINED: "faint", NO_REPLY: "faint",
+    HOST_DECLINED: "faint",
+}
 LUMA_STAGES = {"approved": ACCEPTED, "pending_approval": WAITING, "declined": HOST_DECLINED}
 
 INK = "#262421"
@@ -148,6 +153,7 @@ class Invitee(NamedTuple):
     email: str
     role: str
     declined: bool  # Invite Declined is checked
+    maybe: bool  # Invite Maybe is checked
     rsvp: bool  # the sheet's Luma RSVP checkbox
     accept: bool  # the sheet's Luma Accept checkbox
 
@@ -233,17 +239,20 @@ def count_outreach(rows: Sequence[Sequence[str]]) -> Outreach:
         is_bounced = sent.lower() == "bounced"
         is_invited = bool(sent) and not is_bounced
         said_no = checkbox(cells[columns[INVITE_DECLINED]], row_number, INVITE_DECLINED, problems)
+        maybe = checkbox(cells[columns[INVITE_MAYBE]], row_number, INVITE_MAYBE, problems)
         rsvp = checkbox(cells[columns[LUMA_RSVP]], row_number, LUMA_RSVP, problems)
         accept = checkbox(cells[columns[LUMA_ACCEPT]], row_number, LUMA_ACCEPT, problems)
         if accept and not rsvp:
             problems.append(f"row {row_number}, {LUMA_ACCEPT}: checked without {LUMA_RSVP}")
         if not is_invited:
-            for column, checked in ((INVITE_DECLINED, said_no), (LUMA_RSVP, rsvp)):
+            for column, checked in ((INVITE_DECLINED, said_no), (INVITE_MAYBE, maybe), (LUMA_RSVP, rsvp)):
                 if checked:
                     reason = "Bounced" if is_bounced else "blank"
                     problems.append(f"row {row_number}, {column}: checked, but {EMAIL_SENT} is {reason}")
         if said_no and rsvp:
             problems.append(f"row {row_number}, {INVITE_DECLINED} and {LUMA_RSVP}: both are checked")
+        if said_no and maybe:
+            problems.append(f"row {row_number}, {INVITE_DECLINED} and {INVITE_MAYBE}: both are checked")
         invited += is_invited
         bounced += is_bounced
         not_contacted += not sent
@@ -260,7 +269,7 @@ def count_outreach(rows: Sequence[Sequence[str]]) -> Outreach:
             )
             continue
         invitees.append(Invitee(
-            row_number, cells[columns[NAME]].strip(), cells[columns[EMAIL]].strip(), role, said_no, rsvp, accept,
+            row_number, cells[columns[NAME]].strip(), cells[columns[EMAIL]].strip(), role, said_no, maybe, rsvp, accept,
         ))
     if problems:
         heading = "The sheet has 1 problem" if len(problems) == 1 else f"The sheet has {len(problems)} problems"
@@ -345,7 +354,9 @@ def stages_of(invitee: Invitee, guest: Guest | None) -> tuple[str, str | None]:
     """An invitee's reply and, for an RSVP, the host's decision. Luma is the record."""
     if guest is not None:
         return RSVPD, LUMA_STAGES[guest.status]
-    return (DECLINED if invitee.declined else NO_REPLY), None
+    if invitee.declined:
+        return DECLINED, None
+    return (MAYBE if invitee.maybe else NO_REPLY), None
 
 
 def plural(count: int, singular: str, plural_form: str | None = None) -> str:
@@ -407,6 +418,7 @@ def funnel_data(outreach: Outreach, matching: Matching, as_of: str) -> dict[str,
         VIA_LUMA: ["Via Luma only", f"{via:,}, not invited"],
         **{role.name: [f"{role.name} {sizes[role.name]:,}"] for role in roles if role.name != VIA_LUMA},
         RSVPD: [f"RSVP’d {rsvped:,}", f"{rsvped - via:,} invited", f"{via:,} via Luma"],
+        MAYBE: [f"Maybe {reply_totals[MAYBE]:,}"],
         DECLINED: [f"Declined {reply_totals[DECLINED]:,}"],
         NO_REPLY: [f"No reply yet {reply_totals[NO_REPLY]:,}", f"{percent(reply_totals[NO_REPLY], invited)}% of invited"],
     }
@@ -447,7 +459,7 @@ def funnel_data(outreach: Outreach, matching: Matching, as_of: str) -> dict[str,
         "links": links,
         "totals": {
             "invited": invited, "via_luma": via, "rsvped": rsvped, "accepted": accepted,
-            "declined": reply_totals[DECLINED], "no_reply": reply_totals[NO_REPLY],
+            "maybe": reply_totals[MAYBE], "declined": reply_totals[DECLINED], "no_reply": reply_totals[NO_REPLY],
             "waiting": decision_totals[WAITING], "host_declined": decision_totals[HOST_DECLINED],
         },
         "bounced": outreach.bounced,
@@ -538,8 +550,9 @@ def render_page(data: dict[str, Any], event: str) -> str:
             "host, declined is Host declined.",
         ),
         (
-            "Not on Luma = declined or no reply.",
-            f"Declined if {INVITE_DECLINED} is checked on the sheet; otherwise No reply yet.",
+            "Not on Luma = maybe, declined or no reply.",
+            f"Declined if {INVITE_DECLINED} is checked on the sheet; Maybe if {INVITE_MAYBE} is checked; "
+            "otherwise No reply yet.",
         ),
         (
             "On Luma but not on the sheet = Via Luma only.",

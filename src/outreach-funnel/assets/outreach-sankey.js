@@ -18,8 +18,10 @@
   const RIGHT = 943;
   const PADDING = 25; // d3-sankey's gap; the top row's real gaps (58 + 3 × 14) add up to the same 4 × 25
   const GAP = 14; // between neighbor nodes
-  const ROW_START = [LEFT, 200, 160]; // left edge of each row's first node
-  const GAP_BEFORE = { Declined: 64, "No reply yet": 45, "Waiting for host": 70, "Host declined": 141 };
+  const ROW_START = [LEFT, 190, 160]; // left edge of each row's first node
+  // The reply row starts 10 left of the sketch and its gaps are tighter (sketch: Declined 64, No reply yet 45),
+  // so with Maybe added it still ends inside the header rule at 1020.
+  const GAP_BEFORE = { Maybe: 45, Declined: 45, "No reply yet": 30, "Waiting for host": 70, "Host declined": 141 };
   const LABEL_GAP = 12; // least clear space between two labels in a row
   const STRENGTH = {
     strong: { fill: 0.55, edge: 0.9 },

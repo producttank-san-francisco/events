@@ -19,13 +19,13 @@ from src.outreach_funnel import (
     percent, read_sheet, render_page, role_of,
 )
 
-HEADER = ["Name", " Email", "Label", " Email Sent", "Invite Declined", "Luma RSVP ", "Luma Accept", "Notes"]
+HEADER = ["Name", " Email", "Label", " Email Sent", "Invite Declined", "Invite Maybe", "Luma RSVP ", "Luma Accept", "Notes"]
 LUMA_HEADER = ["api_id", "name", "email", "approval_status", "ticket_name"]
 AS_OF = "Nov. 3, 2026, noon PST"
 
 
-def person(name, email="", label="Speaker", sent="1", declined="", rsvp="", accept="", notes=""):
-    return [name, email, label, sent, declined, rsvp, accept, notes]
+def person(name, email="", label="Speaker", sent="1", declined="", maybe="", rsvp="", accept="", notes=""):
+    return [name, email, label, sent, declined, maybe, rsvp, accept, notes]
 
 
 def guest(name, email, status):
@@ -99,11 +99,33 @@ class SheetTest(unittest.TestCase):
             self.assertRegex(message, rf"\brow {row_number}\b")
         self.assertNotRegex(message, r"\brow 2\b")
 
+    def test_maybe_rows_that_break_a_rule_are_reported(self):
+        rows = [
+            HEADER,
+            person("Person 1", maybe="TRUE"),
+            person("Person 2", declined="TRUE", maybe="TRUE"),
+            person("Person 3", sent="", maybe="TRUE"),
+            person("Person 4", sent="Bounced", maybe="TRUE"),
+            # Said maybe, then RSVP'd on Luma: both boxes stay checked.
+            person("Person 5", maybe="TRUE", rsvp="TRUE"),
+        ]
+        with self.assertRaises(SheetError) as caught:
+            count_outreach(rows)
+        message = str(caught.exception)
+        for row_number in (3, 4, 5):
+            self.assertRegex(message, rf"\brow {row_number}\b")
+        self.assertNotRegex(message, r"\brow [26]\b")
+
     def test_missing_columns_are_named(self):
         with self.assertRaises(SheetError) as caught:
             count_outreach([["Name", "Email Sent", "Invite Declined"], ["Person 1", "1", ""]])
         for column in ("Email", "Label", "Luma RSVP", "Luma Accept"):
             self.assertIn(column, str(caught.exception))
+
+    def test_sheet_without_invite_maybe_is_refused(self):
+        older_export = [column for column in HEADER if column != "Invite Maybe"]
+        with self.assertRaisesRegex(SheetError, "missing column: Invite Maybe$"):
+            count_outreach([older_export, ["Person 1", "", "Speaker", "1", "", "", "", ""]])
 
     def test_nobody_invited_is_refused(self):
         with self.assertRaises(SheetError):
@@ -116,7 +138,7 @@ class SheetTest(unittest.TestCase):
             write_csv(csv_path, SHEET)
             # gog drops trailing blank cells, so most rows are shorter than the header.
             trimmed = [row[: max((i + 1 for i, cell in enumerate(row) if cell), default=0)] for row in SHEET]
-            json_path.write_text(json.dumps({"range": "Sheet1!A1:H9", "values": trimmed}))
+            json_path.write_text(json.dumps({"range": "Sheet1!A1:I9", "values": trimmed}))
             self.assertLess(len(trimmed[1]), len(HEADER))
             self.assertEqual(count_outreach(read_sheet(json_path)), count_outreach(read_sheet(csv_path)))
             self.assertEqual(len(count_outreach(read_sheet(json_path)).invitees), 6)
@@ -211,6 +233,24 @@ class LumaTest(unittest.TestCase):
             (totals["rsvped"], totals["declined"], totals["accepted"], totals["waiting"], totals["host_declined"]),
             (4, 0, 2, 1, 1),
         )
+
+    def test_maybe_counts_only_without_a_luma_rsvp(self):
+        rows = [
+            HEADER,
+            person("Person 1", "person1@example.com", maybe="TRUE"),
+            # Said maybe, then RSVP'd: Luma is the record.
+            person("Person 2", "person2@example.com", "Volunteer", maybe="TRUE", rsvp="TRUE"),
+            person("Person 3", "person3@example.com", declined="TRUE"),
+            person("Person 4", "person4@example.com"),
+        ]
+        data = chart(rows, [LUMA_HEADER, guest("Person 2", "person2@example.com", "pending_approval")])
+        totals = data["totals"]
+        self.assertEqual(
+            (totals["rsvped"], totals["maybe"], totals["declined"], totals["no_reply"], totals["waiting"]), (1, 1, 1, 1, 1),
+        )
+        self.assertEqual(flows(data)["Volunteers", "RSVP’d", "Volunteers"], 1)
+        self.assertEqual([link["tier"] for link in data["links"] if link["target"] == "Maybe"], ["mid"])
+        self.assertEqual(data["mismatches"], 0)
 
     def test_unknown_luma_status_is_refused(self):
         rows = [LUMA_HEADER, guest("Guest 1", "g1@example.com", "invited"), guest("Guest 2", "g2@example.com", "invited")]

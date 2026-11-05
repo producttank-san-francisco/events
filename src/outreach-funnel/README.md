@@ -1,6 +1,6 @@
 # Outreach funnel
 
-Shows an event's outreach by role as an interactive Sankey chart. People flow from the top row (their role: Volunteers, Speakers, Sponsors, Judges & partners, plus Luma guests we did not invite) to their reply (RSVP’d, Declined, No reply yet) and then to the host's decision on Luma (Accepted, Waiting for host, Host declined). Ribbon width is people; color is role. Ribbons into RSVP’d and Accepted are strong, ribbons into Waiting for host are lighter, and ribbons into Declined, No reply yet and Host declined are faint.
+Shows an event's outreach by role as an interactive Sankey chart. People flow from the top row (their role: Volunteers, Speakers, Sponsors, Judges & partners, plus Luma guests we did not invite) to their reply (RSVP’d, Maybe, Declined, No reply yet) and then to the host's decision on Luma (Accepted, Waiting for host, Host declined). Ribbon width is people; color is role. Ribbons into RSVP’d and Accepted are strong, ribbons into Maybe and Waiting for host are lighter, and ribbons into Declined, No reply yet and Host declined are faint.
 
 The script writes one web page, `index.html`, to `docs/reports/outreach-funnel/`. The `docs/` folder is not tracked in git, so the page exists only in your local checkout. The page is one self-contained file: it works offline and from a local file and loads nothing from the network.
 
@@ -28,7 +28,7 @@ Both exports hold names and emails, so never save them in the repository.
 
 | Option | Meaning |
 | --- | --- |
-| `--sheet PATH` | Required. The outreach sheet: `.json` is a gog export, anything else is a CSV. Needs the columns `Name`, `Email`, `Label`, `Email Sent`, `Invite Declined`, `Luma RSVP` and `Luma Accept`. |
+| `--sheet PATH` | Required. The outreach sheet: `.json` is a gog export, anything else is a CSV. Needs the columns `Name`, `Email`, `Label`, `Email Sent`, `Invite Declined`, `Invite Maybe`, `Luma RSVP` and `Luma Accept`. |
 | `--luma PATH` | Required. The Luma guest CSV export. Needs the columns `name`, `email` and `approval_status`. |
 | `--event TEXT` | Required. The page title. |
 | `--as-of` | Optional ISO 8601 timestamp. Without it, the chart uses the older of the two files' modification times, because the chart is no newer than its oldest input. Times show in Los Angeles time, AP style: `Nov. 3, 2026, 12:20 p.m. PST`. |
@@ -44,11 +44,11 @@ After a run, the terminal lists each invitee matched to a Luma guest by name ("M
 2. **Role:** the first entry of the `Label` cell (entries are split on `;`). An entry that starts with `Speaker` is Speakers; one that starts with `Volunteer` is Volunteers; any entry with `Sponsor` in it (any case, for example `Sponsor champion` or `Alum/Sponsor`) is Sponsors; `Judge` or `Community Partner` is Judges & partners. An invited row with any other first label, or a blank one, is an error.
 3. **Matching:** each invitee is matched to at most one Luma guest. First every invitee is matched by email (trimmed, any case). Then invitees still unmatched are matched by name against the guests still unused: the first and last words of both names must be equal, ignoring case, punctuation and middle names. If two unused guests match one invitee by name, the run stops with an error; add that guest's Luma email to the sheet.
 4. **Host decision:** Luma's `approval_status` decides it. `approved` is Accepted, `pending_approval` is Waiting for host and `declined` is Host declined. Any other status is an error.
-5. **Reply:** an invitee with a Luma match RSVP’d; Luma is the record. An invitee with no match declined if `Invite Declined` is checked; otherwise there is no reply yet.
+5. **Reply:** an invitee with a Luma match RSVP’d; Luma is the record, even if `Invite Declined` or `Invite Maybe` is checked. An invitee with no match declined if `Invite Declined` is checked, said maybe if `Invite Maybe` is checked, and otherwise has no reply yet.
 6. **Via Luma only:** Luma guests that match no invitee were not invited. They are their own role and are placed by their Luma status in the same way.
 7. **Cross-check:** each invitee's `Luma RSVP` checkbox is compared with "has a Luma match" and `Luma Accept` with "Luma status is approved". Margin note 1 says whether they all agree; where they disagree, the chart uses Luma.
 
-Checkbox cells read `TRUE` as checked and blank or `FALSE` as not checked; any other value is an error. These sheet rows are also errors: `Luma Accept` checked without `Luma RSVP`; `Invite Declined` or `Luma RSVP` checked for someone not invited; both `Invite Declined` and `Luma RSVP` checked. A sheet with nobody invited is an error. Shares are whole percents of the exact fraction, with halves rounded up. The page's "How we count" margin note states these rules too.
+Checkbox cells read `TRUE` as checked and blank or `FALSE` as not checked; any other value is an error. These sheet rows are also errors: `Luma Accept` checked without `Luma RSVP`; `Invite Declined`, `Invite Maybe` or `Luma RSVP` checked for someone not invited; both `Invite Declined` and `Luma RSVP` checked; both `Invite Declined` and `Invite Maybe` checked. A sheet with nobody invited is an error. Shares are whole percents of the exact fraction, with halves rounded up. The page's "How we count" margin note states these rules too.
 
 ## Files
 
